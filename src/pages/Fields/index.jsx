@@ -1,99 +1,128 @@
-import { Box, Typography, Paper, Grid, Chip, Button } from '@mui/material';
+import { useState, useEffect, useCallback } from 'react';
+import { Box, Typography, Paper, Grid, Button, Chip, TextField, InputAdornment, IconButton } from '@mui/material';
 import { motion } from 'framer-motion';
 import AddIcon from '@mui/icons-material/Add';
+import SearchIcon from '@mui/icons-material/Search';
+import EditIcon from '@mui/icons-material/Edit';
+import DeleteIcon from '@mui/icons-material/Delete';
 import GrassIcon from '@mui/icons-material/Grass';
-import { fields } from '../../data/mockData';
+import LocationOnIcon from '@mui/icons-material/LocationOn';
+import { useAuth } from '../../hooks/useAuth';
+import { useToast } from '../../context/ToastContext';
+import { getFields, searchFields, createField, updateField, deleteField } from '../../services/fieldService';
+import EmptyState from '../../components/common/EmptyState';
+import ConfirmDialog from '../../components/common/ConfirmDialog';
+import FieldForm from './FieldForm';
 
 const MotionBox = motion.create(Box);
 
-const statusStyles = {
-  'Active': { color: '#16A34A', bg: 'rgba(22, 163, 74, 0.08)' },
-  'In Progress': { color: '#2563EB', bg: 'rgba(37, 99, 235, 0.08)' },
-  'Scheduled': { color: '#7C3AED', bg: 'rgba(124, 58, 237, 0.08)' },
-  'Completed': { color: '#64748B', bg: 'rgba(15, 23, 42, 0.06)' },
-};
-
 export default function Fields() {
+  const { company } = useAuth();
+  const { showToast } = useToast();
+  const [fields, setFields] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
+  const [formOpen, setFormOpen] = useState(false);
+  const [editingField, setEditingField] = useState(null);
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [deleting, setDeleting] = useState(false);
+
+  const fetchFields = useCallback(async () => {
+    if (!company?.id) return;
+    try {
+      const data = search ? await searchFields(company.id, search) : await getFields(company.id);
+      setFields(data);
+    } catch (err) { showToast(err.message, 'error'); }
+    finally { setLoading(false); }
+  }, [company?.id, search, showToast]);
+
+  useEffect(() => { fetchFields(); }, [fetchFields]);
+
+  const handleCreate = () => { setEditingField(null); setFormOpen(true); };
+  const handleEdit = (field) => { setEditingField(field); setFormOpen(true); };
+
+  const handleSave = async (formData) => {
+    try {
+      if (editingField) {
+        await updateField(editingField.id, formData);
+        showToast('Field updated successfully');
+      } else {
+        await createField({ ...formData, company_id: company.id });
+        showToast('Field created successfully');
+      }
+      setFormOpen(false);
+      fetchFields();
+    } catch (err) { showToast(err.message, 'error'); }
+  };
+
+  const handleDelete = async () => {
+    setDeleting(true);
+    try {
+      await deleteField(deleteTarget.id);
+      showToast('Field deleted');
+      setDeleteTarget(null);
+      fetchFields();
+    } catch (err) { showToast(err.message, 'error'); }
+    finally { setDeleting(false); }
+  };
+
   return (
     <Box>
-      <MotionBox
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4 }}
-      >
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+      <MotionBox initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3, flexWrap: 'wrap', gap: 2 }}>
           <Box>
             <Typography variant="h4" sx={{ mb: 0.5 }}>Fields</Typography>
-            <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-              Manage farm fields and spray zones
-            </Typography>
+            <Typography variant="body2" sx={{ color: 'text.secondary' }}>Manage spray fields and crop zones</Typography>
           </Box>
-          <Button variant="contained" startIcon={<AddIcon />} size="large">
-            Add Field
-          </Button>
+          <Button variant="contained" startIcon={<AddIcon />} size="large" onClick={handleCreate}>Add Field</Button>
         </Box>
 
-        <Grid container spacing={2.5}>
-          {fields.map((field, i) => {
-            const style = statusStyles[field.status] || statusStyles.Active;
-            return (
+        <Paper sx={{ p: 2, mb: 3, bgcolor: '#FFFFFF' }}>
+          <TextField fullWidth size="small" placeholder="Search fields by name or crop..." value={search} onChange={(e) => setSearch(e.target.value)}
+            InputProps={{ startAdornment: <InputAdornment position="start"><SearchIcon sx={{ color: 'text.tertiary', fontSize: '1.2rem' }} /></InputAdornment> }}
+          />
+        </Paper>
+
+        {!loading && fields.length === 0 ? (
+          <Paper sx={{ bgcolor: '#FFFFFF' }}>
+            <EmptyState icon={<GrassIcon />} title="No fields yet" description="Add your first spray field to start planning missions." actionLabel="Add Field" onAction={handleCreate} />
+          </Paper>
+        ) : (
+          <Grid container spacing={2.5}>
+            {fields.map((field, i) => (
               <Grid item xs={12} sm={6} md={4} key={field.id}>
-                <MotionBox
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.3, delay: i * 0.05 }}
-                >
-                  <Paper
-                    sx={{
-                      p: 2.5,
-                      bgcolor: '#FFFFFF',
-                      cursor: 'pointer',
-                      '&:hover': {
-                        boxShadow: '0 12px 40px rgba(0, 0, 0, 0.08)',
-                        transform: 'translateY(-2px)',
-                      },
-                    }}
-                  >
+                <MotionBox initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, delay: i * 0.03 }}>
+                  <Paper sx={{ p: 2.5, bgcolor: '#FFFFFF', height: '100%' }}>
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
-                      <Box
-                        sx={{
-                          width: 40,
-                          height: 40,
-                          borderRadius: '10px',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          bgcolor: 'rgba(22, 163, 74, 0.08)',
-                          color: 'primary.main',
-                        }}
-                      >
-                        <GrassIcon />
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flex: 1, minWidth: 0 }}>
+                        <Box sx={{ width: 36, height: 36, borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: 'rgba(22, 163, 74, 0.08)', color: 'primary.main', flexShrink: 0 }}>
+                          <GrassIcon sx={{ fontSize: '1.1rem' }} />
+                        </Box>
+                        <Box sx={{ minWidth: 0 }}>
+                          <Typography sx={{ fontSize: '0.9rem', fontWeight: 600 }} noWrap>{field.field_name}</Typography>
+                          <Typography sx={{ fontSize: '0.75rem', color: 'text.secondary' }} noWrap>{field.farms?.farm_name} • {field.farms?.customers?.customer_name}</Typography>
+                        </Box>
                       </Box>
-                      <Chip
-                        label={field.status}
-                        size="small"
-                        sx={{ bgcolor: style.bg, color: style.color, fontWeight: 600, fontSize: '0.65rem', height: 22 }}
-                      />
+                      <Box sx={{ display: 'flex', gap: 0.5, flexShrink: 0 }}>
+                        <IconButton size="small" onClick={() => handleEdit(field)}><EditIcon sx={{ fontSize: '1rem' }} /></IconButton>
+                        <IconButton size="small" onClick={() => setDeleteTarget(field)}><DeleteIcon sx={{ fontSize: '1rem', color: 'error.main' }} /></IconButton>
+                      </Box>
                     </Box>
-                    <Typography sx={{ fontSize: '0.95rem', fontWeight: 600, mb: 0.5 }}>{field.name}</Typography>
-                    <Typography sx={{ fontSize: '0.8rem', color: 'text.secondary', mb: 1.5 }}>{field.farm}</Typography>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                      <Box>
-                        <Typography sx={{ fontSize: '0.65rem', color: 'text.tertiary' }}>Crop</Typography>
-                        <Typography sx={{ fontSize: '0.8rem', fontWeight: 500 }}>{field.crop}</Typography>
-                      </Box>
-                      <Box>
-                        <Typography sx={{ fontSize: '0.65rem', color: 'text.tertiary' }}>Area</Typography>
-                        <Typography sx={{ fontSize: '0.8rem', fontWeight: 600 }}>{field.area} ha</Typography>
-                      </Box>
+                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                      {field.crop && <Chip label={field.crop} size="small" sx={{ fontSize: '0.7rem', height: 22, bgcolor: 'rgba(22, 163, 74, 0.08)', color: 'primary.main', fontWeight: 600 }} />}
+                      {field.area_hectares && <Chip label={`${field.area_hectares} ha`} size="small" variant="outlined" sx={{ fontSize: '0.7rem', height: 22 }} />}
+                      {field.wind_limit && <Chip label={`≤${field.wind_limit} km/h`} size="small" variant="outlined" sx={{ fontSize: '0.7rem', height: 22 }} />}
                     </Box>
                   </Paper>
                 </MotionBox>
               </Grid>
-            );
-          })}
-        </Grid>
+            ))}
+          </Grid>
+        )}
       </MotionBox>
+
+      <FieldForm open={formOpen} onClose={() => setFormOpen(false)} onSave={handleSave} field={editingField} />
+      <ConfirmDialog open={!!deleteTarget} title="Delete Field" message={`Delete "${deleteTarget?.field_name}"? This action cannot be undone.`} onConfirm={handleDelete} onCancel={() => setDeleteTarget(null)} loading={deleting} />
     </Box>
   );
 }

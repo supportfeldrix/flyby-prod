@@ -29,13 +29,13 @@ import { signOut } from '../../services/authService';
 
 const navItems = [
   { label: 'Mission Control', icon: <DashboardIcon />, path: '/' },
-  { label: "Today's Missions", icon: <FlightTakeoffIcon />, path: '/flight-planner' },
-  { label: 'Flight Planner', icon: <MapIcon />, path: '/flight-planner' },
-  { label: 'Fields', icon: <GrassIcon />, path: '/fields' },
   { label: 'Customers', icon: <PeopleIcon />, path: '/customers' },
-  { label: 'Pilots', icon: <PersonIcon />, path: '/pilots' },
+  { label: 'Farms', icon: <MapIcon />, path: '/farms' },
+  { label: 'Fields', icon: <GrassIcon />, path: '/fields' },
   { label: 'Fleet', icon: <AirplanemodeActiveIcon />, path: '/fleet' },
-  { label: 'Weather Intelligence', icon: <CloudIcon />, path: '/weather' },
+  { label: 'Pilots', icon: <PersonIcon />, path: '/pilots' },
+  { label: 'Weather', icon: <CloudIcon />, path: '/weather' },
+  { label: 'Flight Planner', icon: <FlightTakeoffIcon />, path: '/flight-planner' },
   { label: 'Reports', icon: <AssessmentIcon />, path: '/reports' },
 ];
 

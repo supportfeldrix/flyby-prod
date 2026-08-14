@@ -13,8 +13,6 @@ import SearchIcon from '@mui/icons-material/Search';
 import NotificationsNoneIcon from '@mui/icons-material/NotificationsNone';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import { useAuth } from '../../hooks/useAuth';
-import { weather } from '../../data/mockData';
-
 export default function TopBar({ onMenuClick, isMobile }) {
   const { profile, company } = useAuth();
   const now = new Date();
@@ -87,21 +85,21 @@ export default function TopBar({ onMenuClick, isMobile }) {
       <Box sx={{ flex: 1 }} />
 
       {/* Weather status */}
-      <Tooltip title={`${weather.temperature}°C • Wind ${weather.windSpeed} km/h ${weather.windDirection}`}>
+      <Tooltip title="Weather data coming in Sprint 4">
         <Chip
           icon={<CheckCircleOutlineIcon sx={{ fontSize: '1rem' }} />}
-          label={weather.sprayWindow.safe ? 'Safe to Fly' : 'Check Conditions'}
+          label="Operational"
           size="small"
           sx={{
-            bgcolor: weather.sprayWindow.safe ? 'rgba(22, 163, 74, 0.08)' : 'rgba(245, 158, 11, 0.08)',
-            color: weather.sprayWindow.safe ? 'success.main' : 'warning.dark',
+            bgcolor: 'rgba(22, 163, 74, 0.08)',
+            color: 'success.main',
             fontWeight: 600,
             fontSize: '0.75rem',
             border: '1px solid',
-            borderColor: weather.sprayWindow.safe ? 'rgba(22, 163, 74, 0.2)' : 'rgba(245, 158, 11, 0.2)',
+            borderColor: 'rgba(22, 163, 74, 0.2)',
             display: { xs: 'none', sm: 'flex' },
             '& .MuiChip-icon': {
-              color: weather.sprayWindow.safe ? 'success.main' : 'warning.dark',
+              color: 'success.main',
             },
           }}
         />
