@@ -6,10 +6,12 @@ import SearchIcon from '@mui/icons-material/Search';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import GrassIcon from '@mui/icons-material/Grass';
-import LocationOnIcon from '@mui/icons-material/LocationOn';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
 import { useAuth } from '../../hooks/useAuth';
 import { useToast } from '../../context/ToastContext';
 import { getFields, searchFields, createField, updateField, deleteField } from '../../services/fieldService';
+import { geoJSONToLatLngs, calculateArea } from '../../services/boundaryService';
 import EmptyState from '../../components/common/EmptyState';
 import ConfirmDialog from '../../components/common/ConfirmDialog';
 import FieldForm from './FieldForm';
@@ -66,6 +68,11 @@ export default function Fields() {
     finally { setDeleting(false); }
   };
 
+  const handleFieldUpdated = (updatedField) => {
+    setFields((prev) => prev.map((f) => f.id === updatedField.id ? { ...f, ...updatedField } : f));
+    setEditingField((prev) => prev?.id === updatedField.id ? { ...prev, ...updatedField } : prev);
+  };
+
   return (
     <Box>
       <MotionBox initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
@@ -89,39 +96,66 @@ export default function Fields() {
           </Paper>
         ) : (
           <Grid container spacing={2.5}>
-            {fields.map((field, i) => (
-              <Grid item xs={12} sm={6} md={4} key={field.id}>
-                <MotionBox initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, delay: i * 0.03 }}>
-                  <Paper sx={{ p: 2.5, bgcolor: '#FFFFFF', height: '100%' }}>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flex: 1, minWidth: 0 }}>
-                        <Box sx={{ width: 36, height: 36, borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: 'rgba(22, 163, 74, 0.08)', color: 'primary.main', flexShrink: 0 }}>
-                          <GrassIcon sx={{ fontSize: '1.1rem' }} />
+            {fields.map((field, i) => {
+              const hasBoundary = !!field.boundary;
+              const boundaryPoints = hasBoundary ? geoJSONToLatLngs(field.boundary).length : 0;
+              const boundaryArea = hasBoundary ? calculateArea(field.boundary.coordinates[0]) : null;
+
+              return (
+                <Grid item xs={12} sm={6} md={4} key={field.id}>
+                  <MotionBox initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, delay: i * 0.03 }}>
+                    <Paper sx={{ p: 2.5, bgcolor: '#FFFFFF', height: '100%' }}>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flex: 1, minWidth: 0 }}>
+                          <Box sx={{ width: 36, height: 36, borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: 'rgba(22, 163, 74, 0.08)', color: 'primary.main', flexShrink: 0 }}>
+                            <GrassIcon sx={{ fontSize: '1.1rem' }} />
+                          </Box>
+                          <Box sx={{ minWidth: 0 }}>
+                            <Typography sx={{ fontSize: '0.9rem', fontWeight: 600 }} noWrap>{field.field_name}</Typography>
+                            <Typography sx={{ fontSize: '0.75rem', color: 'text.secondary' }} noWrap>{field.farms?.farm_name} • {field.farms?.customers?.customer_name}</Typography>
+                          </Box>
                         </Box>
-                        <Box sx={{ minWidth: 0 }}>
-                          <Typography sx={{ fontSize: '0.9rem', fontWeight: 600 }} noWrap>{field.field_name}</Typography>
-                          <Typography sx={{ fontSize: '0.75rem', color: 'text.secondary' }} noWrap>{field.farms?.farm_name} • {field.farms?.customers?.customer_name}</Typography>
+                        <Box sx={{ display: 'flex', gap: 0.5, flexShrink: 0 }}>
+                          <IconButton size="small" onClick={() => handleEdit(field)}><EditIcon sx={{ fontSize: '1rem' }} /></IconButton>
+                          <IconButton size="small" onClick={() => setDeleteTarget(field)}><DeleteIcon sx={{ fontSize: '1rem', color: 'error.main' }} /></IconButton>
                         </Box>
                       </Box>
-                      <Box sx={{ display: 'flex', gap: 0.5, flexShrink: 0 }}>
-                        <IconButton size="small" onClick={() => handleEdit(field)}><EditIcon sx={{ fontSize: '1rem' }} /></IconButton>
-                        <IconButton size="small" onClick={() => setDeleteTarget(field)}><DeleteIcon sx={{ fontSize: '1rem', color: 'error.main' }} /></IconButton>
+
+                      {/* Boundary Status */}
+                      <Box sx={{ mb: 1.5 }}>
+                        {hasBoundary ? (
+                          <Chip
+                            icon={<CheckCircleIcon sx={{ fontSize: '0.75rem' }} />}
+                            label={`Boundary Complete • ${boundaryArea?.hectares} ha • ${boundaryPoints} pts`}
+                            size="small"
+                            sx={{ bgcolor: 'rgba(22, 163, 74, 0.08)', color: 'success.main', fontWeight: 600, fontSize: '0.6rem', height: 22, '& .MuiChip-icon': { color: 'success.main' } }}
+                          />
+                        ) : (
+                          <Chip
+                            icon={<ErrorOutlineIcon sx={{ fontSize: '0.75rem' }} />}
+                            label="Boundary Missing"
+                            size="small"
+                            sx={{ bgcolor: 'rgba(245, 158, 11, 0.08)', color: 'warning.dark', fontWeight: 600, fontSize: '0.6rem', height: 22, '& .MuiChip-icon': { color: 'warning.dark' } }}
+                          />
+                        )}
                       </Box>
-                    </Box>
-                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                      {field.crop && <Chip label={field.crop} size="small" sx={{ fontSize: '0.7rem', height: 22, bgcolor: 'rgba(22, 163, 74, 0.08)', color: 'primary.main', fontWeight: 600 }} />}
-                      {field.area_hectares && <Chip label={`${field.area_hectares} ha`} size="small" variant="outlined" sx={{ fontSize: '0.7rem', height: 22 }} />}
-                      {field.wind_limit && <Chip label={`≤${field.wind_limit} km/h`} size="small" variant="outlined" sx={{ fontSize: '0.7rem', height: 22 }} />}
-                    </Box>
-                  </Paper>
-                </MotionBox>
-              </Grid>
-            ))}
+
+                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                        {field.crop && <Chip label={field.crop} size="small" sx={{ fontSize: '0.7rem', height: 22, bgcolor: 'rgba(22, 163, 74, 0.06)', color: 'primary.dark', fontWeight: 500 }} />}
+                        {field.area_hectares && !hasBoundary && <Chip label={`${field.area_hectares} ha (manual)`} size="small" variant="outlined" sx={{ fontSize: '0.7rem', height: 22 }} />}
+                        {field.wind_limit && <Chip label={`≤${field.wind_limit} km/h`} size="small" variant="outlined" sx={{ fontSize: '0.7rem', height: 22 }} />}
+                        {field.latitude && <Chip label={`${field.latitude.toFixed(4)}, ${field.longitude?.toFixed(4)}`} size="small" variant="outlined" sx={{ fontSize: '0.65rem', height: 22 }} />}
+                      </Box>
+                    </Paper>
+                  </MotionBox>
+                </Grid>
+              );
+            })}
           </Grid>
         )}
       </MotionBox>
 
-      <FieldForm open={formOpen} onClose={() => setFormOpen(false)} onSave={handleSave} field={editingField} />
+      <FieldForm open={formOpen} onClose={() => setFormOpen(false)} onSave={handleSave} field={editingField} onFieldUpdated={handleFieldUpdated} />
       <ConfirmDialog open={!!deleteTarget} title="Delete Field" message={`Delete "${deleteTarget?.field_name}"? This action cannot be undone.`} onConfirm={handleDelete} onCancel={() => setDeleteTarget(null)} loading={deleting} />
     </Box>
   );

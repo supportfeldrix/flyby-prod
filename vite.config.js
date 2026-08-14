@@ -17,6 +17,7 @@ export default defineConfig({
           vendor: ['react', 'react-dom', 'react-router-dom'],
           mui: ['@mui/material', '@mui/icons-material'],
           motion: ['framer-motion'],
+          maps: ['leaflet', 'react-leaflet'],
         },
       },
     },
