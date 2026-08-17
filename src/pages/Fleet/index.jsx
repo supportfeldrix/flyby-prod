@@ -94,25 +94,25 @@ export default function Fleet() {
         {/* Fleet summary bar */}
         {stats.total > 0 && (
           <Paper sx={{ p: 2.5, mb: 3, bgcolor: '#FFFFFF' }}>
-            <Box sx={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: '#16A34A' }} />
-                <Typography sx={{ fontSize: '0.85rem', fontWeight: 500 }}>Ready: {stats.ready}</Typography>
-              </Box>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: '#2563EB' }} />
-                <Typography sx={{ fontSize: '0.85rem', fontWeight: 500 }}>In Mission: {stats.inMission}</Typography>
-              </Box>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: '#F59E0B' }} />
-                <Typography sx={{ fontSize: '0.85rem', fontWeight: 500 }}>Maintenance: {stats.maintenance}</Typography>
-              </Box>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                <Typography sx={{ fontSize: '0.85rem', color: 'text.secondary' }}>Total: {stats.total}</Typography>
-              </Box>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                <Typography sx={{ fontSize: '0.85rem', color: 'text.secondary' }}>Avg Hours: {stats.avgFlightHours}h</Typography>
-              </Box>
+            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'repeat(2, 1fr)', sm: 'repeat(4, 1fr)', md: 'repeat(8, 1fr)' }, gap: 2 }}>
+              {[
+                { label: 'Ready', value: stats.ready, color: '#16A34A', dot: true },
+                { label: 'In Mission', value: stats.inMission, color: '#2563EB', dot: true },
+                { label: 'Maintenance', value: stats.maintenance, color: '#D97706', dot: true },
+                { label: 'Offline', value: stats.offline, color: '#64748B', dot: true },
+                { label: 'Total Aircraft', value: stats.total },
+                { label: 'Avg Hours', value: `${stats.avgFlightHours}h` },
+                { label: 'Missions', value: stats.totalMissions },
+                { label: 'Hectares', value: `${stats.totalHectares} ha` },
+              ].map((item, i) => (
+                <Box key={i} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  {item.dot && <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: item.color, flexShrink: 0 }} />}
+                  <Box>
+                    <Typography sx={{ fontSize: '0.6rem', color: 'text.tertiary', textTransform: 'uppercase', fontWeight: 600, letterSpacing: '0.03em' }}>{item.label}</Typography>
+                    <Typography sx={{ fontSize: '0.9rem', fontWeight: 700, color: item.color || 'text.primary' }}>{item.value}</Typography>
+                  </Box>
+                </Box>
+              ))}
             </Box>
           </Paper>
         )}

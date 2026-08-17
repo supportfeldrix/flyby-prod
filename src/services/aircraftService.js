@@ -63,7 +63,7 @@ export async function deleteAircraft(id) {
 export async function getAircraftStats(companyId) {
   const { data, error } = await supabase
     .from('aircraft')
-    .select('status, flight_hours, purchase_date')
+    .select('status, flight_hours, purchase_date, total_missions, total_hectares')
     .eq('company_id', companyId);
   if (error) throw error;
 
@@ -71,9 +71,12 @@ export async function getAircraftStats(companyId) {
   const ready = data.filter((a) => a.status === 'Ready').length;
   const inMission = data.filter((a) => a.status === 'In Mission').length;
   const maintenance = data.filter((a) => a.status === 'Maintenance').length;
+  const offline = data.filter((a) => a.status === 'Offline').length;
   const avgFlightHours = total > 0 ? Math.round(data.reduce((sum, a) => sum + (a.flight_hours || 0), 0) / total) : 0;
+  const totalMissions = data.reduce((sum, a) => sum + (a.total_missions || 0), 0);
+  const totalHectares = Math.round(data.reduce((sum, a) => sum + (a.total_hectares || 0), 0));
 
-  return { total, ready, inMission, maintenance, avgFlightHours };
+  return { total, ready, inMission, maintenance, offline, avgFlightHours, totalMissions, totalHectares };
 }
 
 export async function getAircraftCount(companyId) {
