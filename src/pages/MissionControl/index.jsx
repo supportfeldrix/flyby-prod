@@ -21,6 +21,9 @@ import { getAircraftStats } from '../../services/aircraftService';
 import { getPilotStats } from '../../services/pilotService';
 import { getBatteryStats } from '../../services/batteryService';
 import { calculateFleetReadiness } from '../../services/readinessService';
+import { getCurrentWeather, getHourlyForecast } from '../../services/weatherService';
+import { generateOperationalRecommendation, evaluateFieldConditions } from '../../services/weatherDecisionService';
+import { getTodaySprayWindow, formatSprayWindow } from '../../services/sprayWindowService';
 import MapPanel from '../../components/cards/MapPanel';
 
 const MotionBox = motion.create(Box);
@@ -135,7 +138,7 @@ function QuickActions() {
 // Main Mission Control Page
 export default function MissionControl() {
   const { company } = useAuth();
-  const [stats, setStats] = useState({ customers: 0, farms: 0, fields: 0, fleet: { total: 0, ready: 0, inMission: 0, maintenance: 0, avgFlightHours: 0 }, pilots: { total: 0, available: 0, flying: 0, onLeave: 0, licenceExpiring: 0, medicalExpiring: 0 }, batteries: { total: 0, ready: 0, charging: 0, lowCharge: 0, lowHealth: 0 }, readiness: { percentage: 0, readyCount: 0, total: 0 } });
+  const [stats, setStats] = useState({ customers: 0, farms: 0, fields: 0, fleet: { total: 0, ready: 0, inMission: 0, maintenance: 0, avgFlightHours: 0 }, pilots: { total: 0, available: 0, flying: 0, onLeave: 0, licenceExpiring: 0, medicalExpiring: 0 }, batteries: { total: 0, ready: 0, charging: 0, lowCharge: 0, lowHealth: 0 }, readiness: { percentage: 0, readyCount: 0, total: 0 }, weather: null, sprayWindow: null });
   const [loading, setLoading] = useState(true);
 
   const fetchStats = useCallback(async () => {
@@ -150,7 +153,18 @@ export default function MissionControl() {
         getBatteryStats(company.id),
         calculateFleetReadiness(company.id),
       ]);
-      setStats({ customers, farms, fields, fleet: fleetStats, pilots: pilotStats, batteries: batteryStats, readiness });
+
+      // Weather (use default location or first field)
+      let weatherData = null;
+      let sprayWindowData = null;
+      try {
+        const current = await getCurrentWeather(-25.75, 28.19);
+        const hourly = await getHourlyForecast(-25.75, 28.19);
+        weatherData = current;
+        sprayWindowData = getTodaySprayWindow(hourly);
+      } catch (e) { /* weather optional */ }
+
+      setStats({ customers, farms, fields, fleet: fleetStats, pilots: pilotStats, batteries: batteryStats, readiness, weather: weatherData, sprayWindow: sprayWindowData });
     } catch (err) {
       console.error('Failed to fetch stats:', err.message);
     } finally {
@@ -181,6 +195,28 @@ export default function MissionControl() {
         </Grid>
 
         <Grid item xs={12} lg={4}>
+          {/* Weather Decision */}
+          {stats.weather && (() => {
+            const rec = generateOperationalRecommendation(stats.weather);
+            const sw = formatSprayWindow(stats.sprayWindow);
+            return (
+              <Paper sx={{ p: 3, mb: 3, bgcolor: '#FFFFFF', borderLeft: `4px solid ${rec.color}` }}>
+                <Typography variant="h6" sx={{ mb: 2, fontSize: '1rem' }}>Flight Conditions</Typography>
+                <Typography sx={{ fontSize: '1rem', fontWeight: 700, color: rec.color, mb: 0.5 }}>{rec.label}</Typography>
+                <Typography sx={{ fontSize: '0.8rem', color: 'text.secondary', mb: 2 }}>{rec.description}</Typography>
+                <Box sx={{ p: 2, borderRadius: '10px', bgcolor: stats.sprayWindow ? 'rgba(22,163,74,0.04)' : 'rgba(239,68,68,0.04)', border: `1px solid ${stats.sprayWindow ? 'rgba(22,163,74,0.1)' : 'rgba(239,68,68,0.1)'}` }}>
+                  <Typography sx={{ fontSize: '0.65rem', color: 'text.tertiary', fontWeight: 600, textTransform: 'uppercase', mb: 0.5 }}>Spray Window</Typography>
+                  <Typography sx={{ fontSize: '1rem', fontWeight: 700, color: stats.sprayWindow ? '#16A34A' : '#EF4444' }}>{sw.text}</Typography>
+                  <Typography sx={{ fontSize: '0.75rem', color: 'text.secondary' }}>{sw.subtext}</Typography>
+                </Box>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 2, fontSize: '0.75rem', color: 'text.tertiary' }}>
+                  <span>{stats.weather.temperature}°C • Wind {stats.weather.windSpeed} km/h</span>
+                  <span>{stats.weather.humidity}% humidity</span>
+                </Box>
+              </Paper>
+            );
+          })()}
+
           <QuickActions />
 
           <Paper sx={{ p: 3, mt: 3, bgcolor: '#FFFFFF' }}>
