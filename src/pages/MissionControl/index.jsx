@@ -24,6 +24,8 @@ import { calculateFleetReadiness } from '../../services/readinessService';
 import { getCurrentWeather, getHourlyForecast } from '../../services/weatherService';
 import { generateOperationalRecommendation, evaluateFieldConditions } from '../../services/weatherDecisionService';
 import { getTodaySprayWindow, formatSprayWindow } from '../../services/sprayWindowService';
+import { getMissionStats, getTodayMissions } from '../../services/missionPlannerService';
+import { getLiveOpsStats } from '../../services/missionExecutionService';
 import MapPanel from '../../components/cards/MapPanel';
 
 const MotionBox = motion.create(Box);
@@ -138,7 +140,7 @@ function QuickActions() {
 // Main Mission Control Page
 export default function MissionControl() {
   const { company } = useAuth();
-  const [stats, setStats] = useState({ customers: 0, farms: 0, fields: 0, fleet: { total: 0, ready: 0, inMission: 0, maintenance: 0, avgFlightHours: 0 }, pilots: { total: 0, available: 0, flying: 0, onLeave: 0, licenceExpiring: 0, medicalExpiring: 0 }, batteries: { total: 0, ready: 0, charging: 0, lowCharge: 0, lowHealth: 0 }, readiness: { percentage: 0, readyCount: 0, total: 0 }, weather: null, sprayWindow: null });
+  const [stats, setStats] = useState({ customers: 0, farms: 0, fields: 0, fleet: { total: 0, ready: 0, inMission: 0, maintenance: 0, avgFlightHours: 0 }, pilots: { total: 0, available: 0, flying: 0, onLeave: 0, licenceExpiring: 0, medicalExpiring: 0 }, batteries: { total: 0, ready: 0, charging: 0, lowCharge: 0, lowHealth: 0 }, readiness: { percentage: 0, readyCount: 0, total: 0 }, weather: null, sprayWindow: null, missionStats: { total: 0, today: 0, todayReady: 0, todayDraft: 0, todayCompleted: 0, todayDispatched: 0 }, todayMissions: [] });
   const [loading, setLoading] = useState(true);
 
   const fetchStats = useCallback(async () => {
@@ -159,12 +161,20 @@ export default function MissionControl() {
       let sprayWindowData = null;
       try {
         const current = await getCurrentWeather(-25.75, 28.19);
-        const hourly = await getHourlyForecast(-25.75, 28.19);
+        const hourlyData = await getHourlyForecast(-25.75, 28.19);
         weatherData = current;
-        sprayWindowData = getTodaySprayWindow(hourly);
+        sprayWindowData = getTodaySprayWindow(hourlyData);
       } catch (e) { /* weather optional */ }
 
-      setStats({ customers, farms, fields, fleet: fleetStats, pilots: pilotStats, batteries: batteryStats, readiness, weather: weatherData, sprayWindow: sprayWindowData });
+      // Missions
+      let missionStatsData = { total: 0, today: 0, todayReady: 0, todayDraft: 0, todayCompleted: 0, todayDispatched: 0 };
+      let todayMissionsData = [];
+      try {
+        missionStatsData = await getMissionStats(company.id);
+        todayMissionsData = await getTodayMissions(company.id);
+      } catch (e) { /* missions optional */ }
+
+      setStats({ customers, farms, fields, fleet: fleetStats, pilots: pilotStats, batteries: batteryStats, readiness, weather: weatherData, sprayWindow: sprayWindowData, missionStats: missionStatsData, todayMissions: todayMissionsData });
     } catch (err) {
       console.error('Failed to fetch stats:', err.message);
     } finally {
@@ -185,11 +195,25 @@ export default function MissionControl() {
           <Box sx={{ mt: 3 }}>
             <Paper sx={{ p: 3, bgcolor: '#FFFFFF' }}>
               <Typography variant="h6" sx={{ mb: 2, fontSize: '1rem' }}>Today's Missions</Typography>
-              <Box sx={{ textAlign: 'center', py: 4 }}>
-                <FlightTakeoffIcon sx={{ fontSize: '2rem', color: 'text.tertiary', mb: 1 }} />
-                <Typography sx={{ color: 'text.secondary', fontSize: '0.9rem' }}>No missions scheduled today.</Typography>
-                <Typography sx={{ color: 'text.tertiary', fontSize: '0.8rem', mt: 0.5 }}>Mission planning available in Sprint 4.</Typography>
-              </Box>
+              {stats.todayMissions.length > 0 ? (
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                  {stats.todayMissions.slice(0, 5).map((m) => (
+                    <Box key={m.id} sx={{ display: 'flex', alignItems: 'center', gap: 2, p: 1.5, borderRadius: '10px', border: '1px solid rgba(15,23,42,0.04)' }}>
+                      <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: m.status === 'Completed' ? '#16A34A' : m.status === 'In Progress' ? '#2563EB' : '#64748B' }} />
+                      <Box sx={{ flex: 1, minWidth: 0 }}>
+                        <Typography sx={{ fontSize: '0.8rem', fontWeight: 600 }} noWrap>{m.mission_number}</Typography>
+                        <Typography sx={{ fontSize: '0.7rem', color: 'text.secondary' }} noWrap>{m.fields?.field_name} • {m.aircraft?.aircraft_name}</Typography>
+                      </Box>
+                      <Chip label={m.status} size="small" sx={{ fontSize: '0.6rem', height: 18 }} />
+                    </Box>
+                  ))}
+                </Box>
+              ) : (
+                <Box sx={{ textAlign: 'center', py: 4 }}>
+                  <FlightTakeoffIcon sx={{ fontSize: '2rem', color: 'text.tertiary', mb: 1 }} />
+                  <Typography sx={{ color: 'text.secondary', fontSize: '0.9rem' }}>No missions scheduled today.</Typography>
+                </Box>
+              )}
             </Paper>
           </Box>
         </Grid>
