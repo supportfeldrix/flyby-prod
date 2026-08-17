@@ -17,6 +17,7 @@ import { useAuth } from '../../hooks/useAuth';
 import { getCustomerCount } from '../../services/customerService';
 import { getFarmCount } from '../../services/farmService';
 import { getFieldCount } from '../../services/fieldService';
+import { getAircraftStats } from '../../services/aircraftService';
 import MapPanel from '../../components/cards/MapPanel';
 
 const MotionBox = motion.create(Box);
@@ -131,18 +132,19 @@ function QuickActions() {
 // Main Mission Control Page
 export default function MissionControl() {
   const { company } = useAuth();
-  const [stats, setStats] = useState({ customers: 0, farms: 0, fields: 0 });
+  const [stats, setStats] = useState({ customers: 0, farms: 0, fields: 0, fleet: { total: 0, ready: 0, inMission: 0, maintenance: 0, avgFlightHours: 0 } });
   const [loading, setLoading] = useState(true);
 
   const fetchStats = useCallback(async () => {
     if (!company?.id) return;
     try {
-      const [customers, farms, fields] = await Promise.all([
+      const [customers, farms, fields, fleetStats] = await Promise.all([
         getCustomerCount(company.id),
         getFarmCount(company.id),
         getFieldCount(company.id),
+        getAircraftStats(company.id),
       ]);
-      setStats({ customers, farms, fields });
+      setStats({ customers, farms, fields, fleet: fleetStats });
     } catch (err) {
       console.error('Failed to fetch stats:', err.message);
     } finally {
@@ -177,11 +179,36 @@ export default function MissionControl() {
 
           <Paper sx={{ p: 3, mt: 3, bgcolor: '#FFFFFF' }}>
             <Typography variant="h6" sx={{ mb: 2, fontSize: '1rem' }}>Fleet Status</Typography>
-            <Box sx={{ textAlign: 'center', py: 3 }}>
-              <AirplanemodeActiveIcon sx={{ fontSize: '2rem', color: 'text.tertiary', mb: 1 }} />
-              <Typography sx={{ color: 'text.secondary', fontSize: '0.85rem' }}>No aircraft added yet.</Typography>
-              <Typography sx={{ color: 'text.tertiary', fontSize: '0.75rem', mt: 0.5 }}>Fleet management coming in Sprint 4.</Typography>
-            </Box>
+            {stats.fleet.total > 0 ? (
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Typography sx={{ fontSize: '0.8rem', color: 'text.secondary' }}>Ready</Typography>
+                  <Typography sx={{ fontSize: '0.85rem', fontWeight: 600, color: '#16A34A' }}>{stats.fleet.ready}</Typography>
+                </Box>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Typography sx={{ fontSize: '0.8rem', color: 'text.secondary' }}>In Mission</Typography>
+                  <Typography sx={{ fontSize: '0.85rem', fontWeight: 600, color: '#2563EB' }}>{stats.fleet.inMission}</Typography>
+                </Box>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Typography sx={{ fontSize: '0.8rem', color: 'text.secondary' }}>Maintenance</Typography>
+                  <Typography sx={{ fontSize: '0.85rem', fontWeight: 600, color: '#F59E0B' }}>{stats.fleet.maintenance}</Typography>
+                </Box>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pt: 1, borderTop: '1px solid rgba(15,23,42,0.04)' }}>
+                  <Typography sx={{ fontSize: '0.8rem', color: 'text.secondary' }}>Total Fleet</Typography>
+                  <Typography sx={{ fontSize: '0.85rem', fontWeight: 700 }}>{stats.fleet.total}</Typography>
+                </Box>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Typography sx={{ fontSize: '0.8rem', color: 'text.secondary' }}>Avg Flight Hours</Typography>
+                  <Typography sx={{ fontSize: '0.85rem', fontWeight: 600 }}>{stats.fleet.avgFlightHours}h</Typography>
+                </Box>
+              </Box>
+            ) : (
+              <Box sx={{ textAlign: 'center', py: 3 }}>
+                <AirplanemodeActiveIcon sx={{ fontSize: '2rem', color: 'text.tertiary', mb: 1 }} />
+                <Typography sx={{ color: 'text.secondary', fontSize: '0.85rem' }}>No aircraft added yet.</Typography>
+                <Typography sx={{ color: 'text.tertiary', fontSize: '0.75rem', mt: 0.5 }}>Register your first drone in Fleet.</Typography>
+              </Box>
+            )}
           </Paper>
 
           <Paper sx={{ p: 3, mt: 3, bgcolor: '#FFFFFF' }}>
