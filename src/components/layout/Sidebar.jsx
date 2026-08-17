@@ -19,6 +19,7 @@ import GrassIcon from '@mui/icons-material/Grass';
 import PeopleIcon from '@mui/icons-material/People';
 import PersonIcon from '@mui/icons-material/Person';
 import AirplanemodeActiveIcon from '@mui/icons-material/AirplanemodeActive';
+import BatteryChargingFullIcon from '@mui/icons-material/BatteryChargingFull';
 import CloudIcon from '@mui/icons-material/Cloud';
 import AssessmentIcon from '@mui/icons-material/Assessment';
 import AccountCircleIcon from '@mui/icons-material/AccountCircle';
@@ -33,6 +34,7 @@ const navItems = [
   { label: 'Farms', icon: <MapIcon />, path: '/farms' },
   { label: 'Fields', icon: <GrassIcon />, path: '/fields' },
   { label: 'Fleet', icon: <AirplanemodeActiveIcon />, path: '/fleet' },
+  { label: 'Batteries', icon: <BatteryChargingFullIcon />, path: '/batteries' },
   { label: 'Pilots', icon: <PersonIcon />, path: '/pilots' },
   { label: 'Weather', icon: <CloudIcon />, path: '/weather' },
   { label: 'Flight Planner', icon: <FlightTakeoffIcon />, path: '/flight-planner' },

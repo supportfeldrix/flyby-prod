@@ -19,6 +19,8 @@ import { getFarmCount } from '../../services/farmService';
 import { getFieldCount } from '../../services/fieldService';
 import { getAircraftStats } from '../../services/aircraftService';
 import { getPilotStats } from '../../services/pilotService';
+import { getBatteryStats } from '../../services/batteryService';
+import { calculateFleetReadiness } from '../../services/readinessService';
 import MapPanel from '../../components/cards/MapPanel';
 
 const MotionBox = motion.create(Box);
@@ -95,9 +97,9 @@ function QuickActions() {
     { label: 'Add Customer', icon: <PeopleIcon />, color: '#16A34A', action: () => navigate('/customers') },
     { label: 'Add Farm', icon: <AgricultureIcon />, color: '#2563EB', action: () => navigate('/farms') },
     { label: 'Add Field', icon: <GrassIcon />, color: '#7C3AED', action: () => navigate('/fields') },
-    { label: 'Fleet (Sprint 4)', icon: <AirplanemodeActiveIcon />, color: '#F59E0B', action: null },
-    { label: 'Weather (Sprint 4)', icon: <CloudIcon />, color: '#0EA5E9', action: null },
-    { label: 'Reports (Sprint 4)', icon: <AssessmentIcon />, color: '#EF4444', action: null },
+    { label: 'Fleet', icon: <AirplanemodeActiveIcon />, color: '#F59E0B', action: () => navigate('/fleet') },
+    { label: 'Batteries', icon: <CloudIcon />, color: '#0EA5E9', action: () => navigate('/batteries') },
+    { label: 'Pilots', icon: <PersonIcon />, color: '#EF4444', action: () => navigate('/pilots') },
   ];
 
   return (
@@ -133,20 +135,22 @@ function QuickActions() {
 // Main Mission Control Page
 export default function MissionControl() {
   const { company } = useAuth();
-  const [stats, setStats] = useState({ customers: 0, farms: 0, fields: 0, fleet: { total: 0, ready: 0, inMission: 0, maintenance: 0, avgFlightHours: 0 }, pilots: { total: 0, available: 0, flying: 0, onLeave: 0, licenceExpiring: 0, medicalExpiring: 0 } });
+  const [stats, setStats] = useState({ customers: 0, farms: 0, fields: 0, fleet: { total: 0, ready: 0, inMission: 0, maintenance: 0, avgFlightHours: 0 }, pilots: { total: 0, available: 0, flying: 0, onLeave: 0, licenceExpiring: 0, medicalExpiring: 0 }, batteries: { total: 0, ready: 0, charging: 0, lowCharge: 0, lowHealth: 0 }, readiness: { percentage: 0, readyCount: 0, total: 0 } });
   const [loading, setLoading] = useState(true);
 
   const fetchStats = useCallback(async () => {
     if (!company?.id) return;
     try {
-      const [customers, farms, fields, fleetStats, pilotStats] = await Promise.all([
+      const [customers, farms, fields, fleetStats, pilotStats, batteryStats, readiness] = await Promise.all([
         getCustomerCount(company.id),
         getFarmCount(company.id),
         getFieldCount(company.id),
         getAircraftStats(company.id),
         getPilotStats(company.id),
+        getBatteryStats(company.id),
+        calculateFleetReadiness(company.id),
       ]);
-      setStats({ customers, farms, fields, fleet: fleetStats, pilots: pilotStats });
+      setStats({ customers, farms, fields, fleet: fleetStats, pilots: pilotStats, batteries: batteryStats, readiness });
     } catch (err) {
       console.error('Failed to fetch stats:', err.message);
     } finally {
