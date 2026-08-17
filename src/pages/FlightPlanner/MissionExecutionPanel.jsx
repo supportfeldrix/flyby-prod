@@ -35,7 +35,7 @@ function formatTimer(seconds) {
   return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
 }
 
-export default function MissionExecutionPanel({ open, onClose, mission: initialMission, onUpdated }) {
+export default function MissionExecutionPanel({ open, onClose, mission: initialMission, onUpdated, mode = 'pilot' }) {
   const { profile, company } = useAuth();
   const { showToast } = useToast();
   const [mission, setMission] = useState(initialMission);
@@ -233,15 +233,23 @@ export default function MissionExecutionPanel({ open, onClose, mission: initialM
 
             {/* Action Buttons */}
             <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5, mb: 3 }}>
+              {/* Dispatcher actions */}
               {status === 'Planned' && <Button variant="contained" startIcon={<SendIcon />} onClick={() => handleAction('dispatch')} disabled={loading} size="large">Dispatch Mission</Button>}
-              {status === 'Dispatched' && allChecked && <Button variant="contained" startIcon={<FlightTakeoffIcon />} onClick={() => handleAction('start')} disabled={loading} size="large">Start Mission</Button>}
-              {status === 'Dispatched' && !allChecked && <Button variant="outlined" disabled startIcon={<FlightTakeoffIcon />} size="large">Complete Checklist to Start</Button>}
-              {status === 'Flying' && <Button variant="outlined" startIcon={<PauseIcon />} onClick={() => handleAction('pause')} disabled={loading}>Pause</Button>}
-              {status === 'Paused' && <Button variant="contained" startIcon={<PlayArrowIcon />} onClick={() => handleAction('resume')} disabled={loading}>Resume</Button>}
-              {(status === 'Flying' || status === 'Paused') && <Button variant="contained" color="primary" startIcon={<CheckCircleIcon />} onClick={() => handleAction('complete')} disabled={loading} size="large">Complete Mission</Button>}
-              {(status === 'Flying' || status === 'Paused') && <Button variant="outlined" color="error" startIcon={<StopIcon />} onClick={() => setShowAbort(true)} disabled={loading}>Abort</Button>}
-              {(status === 'Flying' || status === 'Paused') && <Button variant="contained" color="error" startIcon={<WarningAmberIcon />} onClick={() => handleAction('emergency')} disabled={loading} sx={{ fontWeight: 700 }}>EMERGENCY</Button>}
               {(status === 'Planned' || status === 'Draft') && <Button variant="outlined" color="error" startIcon={<CancelIcon />} onClick={() => handleAction('cancel')} disabled={loading}>Cancel</Button>}
+
+              {/* Pilot-only actions (hidden in dispatcher mode) */}
+              {mode === 'pilot' && status === 'Dispatched' && allChecked && <Button variant="contained" startIcon={<FlightTakeoffIcon />} onClick={() => handleAction('start')} disabled={loading} size="large">Start Mission</Button>}
+              {mode === 'pilot' && status === 'Dispatched' && !allChecked && <Button variant="outlined" disabled startIcon={<FlightTakeoffIcon />} size="large">Complete Checklist to Start</Button>}
+              {mode === 'pilot' && status === 'Flying' && <Button variant="outlined" startIcon={<PauseIcon />} onClick={() => handleAction('pause')} disabled={loading}>Pause</Button>}
+              {mode === 'pilot' && status === 'Paused' && <Button variant="contained" startIcon={<PlayArrowIcon />} onClick={() => handleAction('resume')} disabled={loading}>Resume</Button>}
+              {mode === 'pilot' && (status === 'Flying' || status === 'Paused') && <Button variant="contained" color="primary" startIcon={<CheckCircleIcon />} onClick={() => handleAction('complete')} disabled={loading} size="large">Complete Mission</Button>}
+              {mode === 'pilot' && (status === 'Flying' || status === 'Paused') && <Button variant="outlined" color="error" startIcon={<StopIcon />} onClick={() => setShowAbort(true)} disabled={loading}>Abort</Button>}
+              {mode === 'pilot' && (status === 'Flying' || status === 'Paused') && <Button variant="contained" color="error" startIcon={<WarningAmberIcon />} onClick={() => handleAction('emergency')} disabled={loading} sx={{ fontWeight: 700 }}>EMERGENCY</Button>}
+
+              {/* Dispatcher monitoring message */}
+              {mode === 'dispatcher' && ['Dispatched', 'Pre Flight', 'Flying', 'Paused'].includes(status) && (
+                <Chip label="Awaiting pilot execution" sx={{ fontWeight: 600, fontSize: '0.75rem' }} />
+              )}
             </Box>
 
             {/* Abort reason */}
@@ -268,7 +276,7 @@ export default function MissionExecutionPanel({ open, onClose, mission: initialM
                   {checklist.map((item) => (
                     <FormControlLabel
                       key={item.id}
-                      control={<Checkbox checked={item.checked} onChange={() => handleToggle(item)} size="small" sx={{ '&.Mui-checked': { color: '#16A34A' } }} />}
+                      control={<Checkbox checked={item.checked} onChange={() => mode === 'pilot' && handleToggle(item)} size="small" sx={{ '&.Mui-checked': { color: '#16A34A' } }} disabled={mode !== 'pilot'} />}
                       label={<Typography sx={{ fontSize: '0.8rem', textDecoration: item.checked ? 'line-through' : 'none', color: item.checked ? 'text.tertiary' : 'text.primary' }}>{item.item_label}</Typography>}
                     />
                   ))}

@@ -139,7 +139,7 @@ export default function FlightPlanner() {
       </MotionBox>
 
       <MissionWizard open={wizardOpen} onClose={() => setWizardOpen(false)} onCreated={fetchAll} />
-      <MissionExecutionPanel open={!!execMission} onClose={() => setExecMission(null)} mission={execMission} onUpdated={fetchAll} />
+      <MissionExecutionPanel open={!!execMission} onClose={() => setExecMission(null)} mission={execMission} onUpdated={fetchAll} mode="dispatcher" />
       <ConfirmDialog open={!!deleteTarget} title="Delete Mission" message={`Delete mission "${deleteTarget?.mission_number}"?`} onConfirm={handleDelete} onCancel={() => setDeleteTarget(null)} loading={deleting} />
     </Box>
   );
