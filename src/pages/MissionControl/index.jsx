@@ -18,6 +18,7 @@ import { getCustomerCount } from '../../services/customerService';
 import { getFarmCount } from '../../services/farmService';
 import { getFieldCount } from '../../services/fieldService';
 import { getAircraftStats } from '../../services/aircraftService';
+import { getPilotStats } from '../../services/pilotService';
 import MapPanel from '../../components/cards/MapPanel';
 
 const MotionBox = motion.create(Box);
@@ -132,19 +133,20 @@ function QuickActions() {
 // Main Mission Control Page
 export default function MissionControl() {
   const { company } = useAuth();
-  const [stats, setStats] = useState({ customers: 0, farms: 0, fields: 0, fleet: { total: 0, ready: 0, inMission: 0, maintenance: 0, avgFlightHours: 0 } });
+  const [stats, setStats] = useState({ customers: 0, farms: 0, fields: 0, fleet: { total: 0, ready: 0, inMission: 0, maintenance: 0, avgFlightHours: 0 }, pilots: { total: 0, available: 0, flying: 0, onLeave: 0, licenceExpiring: 0, medicalExpiring: 0 } });
   const [loading, setLoading] = useState(true);
 
   const fetchStats = useCallback(async () => {
     if (!company?.id) return;
     try {
-      const [customers, farms, fields, fleetStats] = await Promise.all([
+      const [customers, farms, fields, fleetStats, pilotStats] = await Promise.all([
         getCustomerCount(company.id),
         getFarmCount(company.id),
         getFieldCount(company.id),
         getAircraftStats(company.id),
+        getPilotStats(company.id),
       ]);
-      setStats({ customers, farms, fields, fleet: fleetStats });
+      setStats({ customers, farms, fields, fleet: fleetStats, pilots: pilotStats });
     } catch (err) {
       console.error('Failed to fetch stats:', err.message);
     } finally {
@@ -213,11 +215,44 @@ export default function MissionControl() {
 
           <Paper sx={{ p: 3, mt: 3, bgcolor: '#FFFFFF' }}>
             <Typography variant="h6" sx={{ mb: 2, fontSize: '1rem' }}>Pilot Schedule</Typography>
-            <Box sx={{ textAlign: 'center', py: 3 }}>
-              <PersonIcon sx={{ fontSize: '2rem', color: 'text.tertiary', mb: 1 }} />
-              <Typography sx={{ color: 'text.secondary', fontSize: '0.85rem' }}>No pilots added yet.</Typography>
-              <Typography sx={{ color: 'text.tertiary', fontSize: '0.75rem', mt: 0.5 }}>Pilot management coming in Sprint 4.</Typography>
-            </Box>
+            {stats.pilots.total > 0 ? (
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Typography sx={{ fontSize: '0.8rem', color: 'text.secondary' }}>Available</Typography>
+                  <Typography sx={{ fontSize: '0.85rem', fontWeight: 600, color: '#16A34A' }}>{stats.pilots.available}</Typography>
+                </Box>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Typography sx={{ fontSize: '0.8rem', color: 'text.secondary' }}>Flying</Typography>
+                  <Typography sx={{ fontSize: '0.85rem', fontWeight: 600, color: '#2563EB' }}>{stats.pilots.flying}</Typography>
+                </Box>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Typography sx={{ fontSize: '0.8rem', color: 'text.secondary' }}>On Leave</Typography>
+                  <Typography sx={{ fontSize: '0.85rem', fontWeight: 600, color: '#D97706' }}>{stats.pilots.onLeave}</Typography>
+                </Box>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pt: 1, borderTop: '1px solid rgba(15,23,42,0.04)' }}>
+                  <Typography sx={{ fontSize: '0.8rem', color: 'text.secondary' }}>Total Pilots</Typography>
+                  <Typography sx={{ fontSize: '0.85rem', fontWeight: 700 }}>{stats.pilots.total}</Typography>
+                </Box>
+                {stats.pilots.licenceExpiring > 0 && (
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Typography sx={{ fontSize: '0.8rem', color: 'warning.dark' }}>Licence Expiring</Typography>
+                    <Typography sx={{ fontSize: '0.85rem', fontWeight: 600, color: 'warning.dark' }}>{stats.pilots.licenceExpiring}</Typography>
+                  </Box>
+                )}
+                {stats.pilots.medicalExpiring > 0 && (
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Typography sx={{ fontSize: '0.8rem', color: 'warning.dark' }}>Medical Expiring</Typography>
+                    <Typography sx={{ fontSize: '0.85rem', fontWeight: 600, color: 'warning.dark' }}>{stats.pilots.medicalExpiring}</Typography>
+                  </Box>
+                )}
+              </Box>
+            ) : (
+              <Box sx={{ textAlign: 'center', py: 3 }}>
+                <PersonIcon sx={{ fontSize: '2rem', color: 'text.tertiary', mb: 1 }} />
+                <Typography sx={{ color: 'text.secondary', fontSize: '0.85rem' }}>No pilots registered yet.</Typography>
+                <Typography sx={{ color: 'text.tertiary', fontSize: '0.75rem', mt: 0.5 }}>Register your first pilot in the Pilots module.</Typography>
+              </Box>
+            )}
           </Paper>
         </Grid>
       </Grid>
