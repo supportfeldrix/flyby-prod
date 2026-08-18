@@ -14,6 +14,7 @@ import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import { supabase } from '../../lib/supabase';
 import MissionExecutionPanel from '../FlightPlanner/MissionExecutionPanel';
+import PilotDocuments from '../../components/pilots/PilotDocuments';
 
 const statusStyles = {
   Available: { color: '#16A34A', bg: 'rgba(22, 163, 74, 0.08)' },
@@ -233,18 +234,7 @@ export default function PilotDetailsDialog({ open, onClose, pilot, onEdit }) {
 
           {/* DOCUMENTS */}
           <TabPanel value={tab} index={5}>
-            <Box sx={{ textAlign: 'center', py: 4 }}>
-              <DescriptionIcon sx={{ fontSize: '2.5rem', color: 'text.tertiary', mb: 1.5 }} />
-              <Typography sx={{ fontSize: '0.9rem', fontWeight: 600, color: 'text.secondary', mb: 0.5 }}>Document management coming soon</Typography>
-              <Typography sx={{ fontSize: '0.8rem', color: 'text.tertiary', maxWidth: 320, mx: 'auto' }}>
-                Upload licences, medical certificates, operator certificates, and training records.
-              </Typography>
-              <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center', mt: 3, flexWrap: 'wrap' }}>
-                {['Pilot Licence', 'Medical Certificate', 'Operator Certificate', 'Training Records'].map((doc) => (
-                  <Chip key={doc} icon={<LockIcon sx={{ fontSize: '0.7rem' }} />} label={doc} size="small" variant="outlined" sx={{ fontSize: '0.7rem', '& .MuiChip-icon': { color: 'text.tertiary' } }} disabled />
-                ))}
-              </Box>
-            </Box>
+            <PilotDocuments pilot={pilot} />
           </TabPanel>
         </DialogContent>
 

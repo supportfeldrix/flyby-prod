@@ -21,6 +21,7 @@ import { getFlightLog, addLogEntry } from '../../services/flightLogService';
 import { dispatchMission, startMission, pauseMission, resumeMission, completeMission, abortMission, cancelMission } from '../../services/missionExecutionService';
 import { updateMission, getMissions } from '../../services/missionPlannerService';
 import { generateMissionReport } from '../../services/missionReportService';
+import { checkPilotCompliance } from '../../services/pilotDocumentService';
 import MissionReportDialog from '../../components/reports/MissionReportDialog';
 import MissionReportPreview from '../../components/reports/MissionReportPreview';
 import { supabase } from '../../lib/supabase';
@@ -51,6 +52,7 @@ export default function MissionExecutionPanel({ open, onClose, mission: initialM
   const [completionReport, setCompletionReport] = useState(null);
   const [showReportDialog, setShowReportDialog] = useState(false);
   const [previewReport, setPreviewReport] = useState(null);
+  const [complianceWarning, setComplianceWarning] = useState(null);
   const timerRef = useRef(null);
 
   // Sync mission from prop
@@ -114,6 +116,23 @@ export default function MissionExecutionPanel({ open, onClose, mission: initialM
     try {
       switch (action) {
         case 'dispatch':
+          // Check pilot compliance before dispatch
+          if (mission.pilot_id) {
+            try {
+              const compliance = await checkPilotCompliance(mission.pilot_id);
+              if (compliance && !compliance.compliant) {
+                const warnings = compliance.warnings || [];
+                const warningMsg = warnings.map(w => w.message).filter(Boolean).join('; ') || 'Mandatory compliance documents are missing or expired';
+                setComplianceWarning(warningMsg);
+                setLoading(false);
+                return; // Block dispatch until override
+              }
+            } catch (compErr) {
+              console.warn('[FlyBy] Compliance check unavailable:', compErr.message);
+              // Allow dispatch if compliance check service is unavailable
+            }
+          }
+          setComplianceWarning(null);
           await dispatchMission(mission, company.id, profile);
           showToast('Mission dispatched — complete pre-flight checklist');
           break;
@@ -278,6 +297,20 @@ export default function MissionExecutionPanel({ open, onClose, mission: initialM
                 <Box sx={{ display: 'flex', gap: 1 }}>
                   <Button size="small" variant="contained" color="error" onClick={() => handleAction('abort')} disabled={!abortReason}>Confirm Abort</Button>
                   <Button size="small" onClick={() => setShowAbort(false)}>Cancel</Button>
+                </Box>
+              </Alert>
+            )}
+
+            {/* Compliance Warning — blocks dispatch until override */}
+            {complianceWarning && status === 'Planned' && (
+              <Alert severity="error" sx={{ mb: 3, borderRadius: '12px' }}>
+                <Typography sx={{ fontSize: '0.85rem', fontWeight: 600, mb: 0.5 }}>Pilot Compliance Issue</Typography>
+                <Typography sx={{ fontSize: '0.8rem', mb: 1.5 }}>{complianceWarning}</Typography>
+                <Box sx={{ display: 'flex', gap: 1 }}>
+                  <Button size="small" variant="contained" color="error" onClick={async () => { setComplianceWarning(null); setLoading(true); await dispatchMission(mission, company.id, profile); showToast('Mission dispatched (compliance override)'); await refreshMission(); await fetchData(); onUpdated?.(); setLoading(false); }}>
+                    Override & Dispatch
+                  </Button>
+                  <Button size="small" onClick={() => setComplianceWarning(null)}>Cancel</Button>
                 </Box>
               </Alert>
             )}
