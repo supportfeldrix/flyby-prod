@@ -22,6 +22,7 @@ import Fleet from './pages/Fleet';
 import Batteries from './pages/Batteries';
 import Weather from './pages/Weather';
 import Reports from './pages/Reports';
+import Commercial from './pages/Commercial';
 import Account from './pages/Account';
 
 function App() {
@@ -89,6 +90,7 @@ function App() {
                 <Route path="fleet" element={<Fleet />} />
               <Route path="batteries" element={<Batteries />} />
                 <Route path="weather" element={<Weather />} />
+                <Route path="commercial" element={<Commercial />} />
                 <Route path="reports" element={<Reports />} />
                 <Route path="account" element={<Account />} />
               </Route>

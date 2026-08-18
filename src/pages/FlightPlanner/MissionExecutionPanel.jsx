@@ -133,16 +133,18 @@ export default function MissionExecutionPanel({ open, onClose, mission: initialM
           break;
         case 'complete':
           await completeMission(mission, company.id, profile);
-          // Auto-generate mission report
+          // Auto-generate mission report after completion
           try {
+            console.log('[FlyBy] Mission completed. Generating report for mission:', mission.id);
             const report = await generateMissionReport(mission.id, company.id, profile?.id, profile?.full_name);
+            console.log('[FlyBy] Report generated successfully:', report.report_number);
             setCompletionReport(report);
             setShowReportDialog(true);
+            showToast('Mission completed — report generated');
           } catch (reportErr) {
-            console.error('Report generation failed:', reportErr);
-            // Mission still completed successfully — report error is non-blocking
+            console.error('[FlyBy] Report generation failed:', reportErr);
+            showToast('Mission completed but report generation failed. Check console for details.', 'warning');
           }
-          showToast('Mission completed — report generated');
           break;
         case 'abort':
           await abortMission(mission, company.id, profile, abortReason, false);

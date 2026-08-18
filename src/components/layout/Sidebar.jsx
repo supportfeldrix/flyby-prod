@@ -22,6 +22,7 @@ import AirplanemodeActiveIcon from '@mui/icons-material/AirplanemodeActive';
 import BatteryChargingFullIcon from '@mui/icons-material/BatteryChargingFull';
 import CloudIcon from '@mui/icons-material/Cloud';
 import AssessmentIcon from '@mui/icons-material/Assessment';
+import BusinessCenterIcon from '@mui/icons-material/BusinessCenter';
 import AccountCircleIcon from '@mui/icons-material/AccountCircle';
 import LogoutIcon from '@mui/icons-material/Logout';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
@@ -38,6 +39,7 @@ const navItems = [
   { label: 'Pilots', icon: <PersonIcon />, path: '/pilots' },
   { label: 'Weather', icon: <CloudIcon />, path: '/weather' },
   { label: 'Flight Planner', icon: <FlightTakeoffIcon />, path: '/flight-planner' },
+  { label: 'Commercial', icon: <BusinessCenterIcon />, path: '/commercial' },
   { label: 'Reports', icon: <AssessmentIcon />, path: '/reports' },
 ];
 

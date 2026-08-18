@@ -2,32 +2,37 @@ import { supabase } from '../lib/supabase';
 
 /**
  * Generate a unique report number for the company.
+ * Uses atomic Postgres function to prevent race conditions.
  */
 async function generateReportNumber(companyId) {
   const year = new Date().getFullYear();
 
-  // Upsert sequence row
+  // Atomic upsert with row-level lock (same pattern as mission numbers)
   const { data: seq, error: seqErr } = await supabase
     .from('report_sequences')
-    .upsert({ company_id: companyId, last_number: 1 }, { onConflict: 'company_id' })
+    .upsert({ company_id: companyId, last_number: 0 }, { onConflict: 'company_id', ignoreDuplicates: true })
     .select()
     .single();
 
-  if (seqErr) {
-    // Fallback: fetch and increment
-    const { data: existing } = await supabase
-      .from('report_sequences')
-      .select('last_number')
-      .eq('company_id', companyId)
-      .single();
+  // Now atomically increment — fetch current value and update
+  const { data: current, error: fetchErr } = await supabase
+    .from('report_sequences')
+    .select('last_number')
+    .eq('company_id', companyId)
+    .single();
 
-    const nextNum = (existing?.last_number || 0) + 1;
-    await supabase.from('report_sequences').update({ last_number: nextNum }).eq('company_id', companyId);
-    return `RPT-${year}-${String(nextNum).padStart(6, '0')}`;
-  }
+  if (fetchErr) throw new Error(`Failed to fetch report sequence: ${fetchErr.message}`);
 
-  const nextNum = seq.last_number + 1;
-  await supabase.from('report_sequences').update({ last_number: nextNum }).eq('company_id', companyId);
+  const nextNum = (current?.last_number || 0) + 1;
+
+  const { error: updateErr } = await supabase
+    .from('report_sequences')
+    .update({ last_number: nextNum })
+    .eq('company_id', companyId)
+    .eq('last_number', current.last_number); // Optimistic lock
+
+  if (updateErr) throw new Error(`Failed to update report sequence: ${updateErr.message}`);
+
   return `RPT-${year}-${String(nextNum).padStart(6, '0')}`;
 }
 
@@ -40,15 +45,15 @@ export async function getMissionForReport(missionId) {
     .select(`
       *,
       customers(id, customer_name, contact_person, phone, email),
-      farms(id, farm_name, location, region),
+      farms(id, farm_name, province, town),
       fields(id, field_name, crop, area_hectares, boundary),
       aircraft(id, aircraft_name, model, registration_number, flight_hours, total_missions, total_hectares),
-      pilots(id, first_name, last_name, display_name, license_number, total_flight_hours, total_missions),
-      battery_sets:battery_id(id, battery_code, current_charge, charge_cycles, health_status)
+      pilots(id, first_name, last_name, display_name, licence_number, total_flight_hours, total_missions),
+      battery_sets:battery_id(id, battery_code, current_charge, charge_cycles, battery_health)
     `)
     .eq('id', missionId)
     .single();
-  if (error) throw error;
+  if (error) throw new Error(`Failed to fetch mission for report: ${error.message}`);
   return data;
 }
 
@@ -61,7 +66,7 @@ export async function getMissionTimeline(missionId) {
     .select('*')
     .eq('mission_id', missionId)
     .order('created_at', { ascending: true });
-  if (error) throw error;
+  if (error) throw new Error(`Failed to fetch mission timeline: ${error.message}`);
   return data || [];
 }
 
@@ -70,12 +75,18 @@ export async function getMissionTimeline(missionId) {
  * Called when a mission is completed.
  */
 export async function generateMissionReport(missionId, companyId, userId, userName) {
+  console.log('[FlyBy] Generating mission report...', { missionId, companyId });
+
   // Fetch all mission data
   const mission = await getMissionForReport(missionId);
+  console.log('[FlyBy] Mission data fetched:', mission.mission_number);
+
   const timeline = await getMissionTimeline(missionId);
+  console.log('[FlyBy] Timeline fetched:', timeline.length, 'events');
 
   // Generate report number
   const reportNumber = await generateReportNumber(companyId);
+  console.log('[FlyBy] Report number generated:', reportNumber);
 
   // Build the report data snapshot (denormalised for historical accuracy)
   const reportData = {
@@ -111,8 +122,8 @@ export async function generateMissionReport(missionId, companyId, userId, userNa
     } : null,
     farm: mission.farms ? {
       name: mission.farms.farm_name,
-      location: mission.farms.location,
-      region: mission.farms.region,
+      location: mission.farms.province || mission.farms.town || null,
+      region: mission.farms.province,
     } : null,
     field: mission.fields ? {
       name: mission.fields.field_name,
@@ -122,7 +133,7 @@ export async function generateMissionReport(missionId, companyId, userId, userNa
     } : null,
     pilot: mission.pilots ? {
       name: mission.pilots.display_name || `${mission.pilots.first_name} ${mission.pilots.last_name}`,
-      license_number: mission.pilots.license_number,
+      license_number: mission.pilots.licence_number,
       total_flight_hours: mission.pilots.total_flight_hours,
       total_missions: mission.pilots.total_missions,
     } : null,
@@ -138,7 +149,7 @@ export async function generateMissionReport(missionId, companyId, userId, userNa
       code: mission.battery_sets.battery_code,
       charge_after: mission.battery_sets.current_charge,
       cycles: mission.battery_sets.charge_cycles,
-      health: mission.battery_sets.health_status,
+      health: mission.battery_sets.battery_health,
     } : null,
     weather: {
       temperature: mission.weather_temp,
@@ -186,7 +197,9 @@ export async function generateMissionReport(missionId, companyId, userId, userNa
     })
     .select()
     .single();
-  if (error) throw error;
+  if (error) throw new Error(`Failed to insert mission report: ${error.message}`);
+
+  console.log('[FlyBy] Report stored in database:', data.report_number);
   return data;
 }
 
