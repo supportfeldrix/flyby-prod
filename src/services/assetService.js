@@ -49,12 +49,26 @@ export async function getAssetById(assetId) {
 }
 
 /**
+ * Sanitise asset data — convert empty strings to null for unique constraint fields.
+ */
+function sanitiseAsset(asset) {
+  const cleaned = { ...asset };
+  if (!cleaned.asset_number?.trim()) cleaned.asset_number = null;
+  if (!cleaned.serial_number?.trim()) cleaned.serial_number = null;
+  if (!cleaned.purchase_price) cleaned.purchase_price = null;
+  if (!cleaned.purchase_date) cleaned.purchase_date = null;
+  if (!cleaned.warranty_expiry) cleaned.warranty_expiry = null;
+  if (!cleaned.category_id) cleaned.category_id = null;
+  return cleaned;
+}
+
+/**
  * Create a new asset.
  */
 export async function createAsset(asset, companyId) {
   const { data, error } = await supabase
     .from('assets')
-    .insert({ ...asset, company_id: companyId })
+    .insert({ ...sanitiseAsset(asset), company_id: companyId })
     .select()
     .single();
   if (error) throw error;
@@ -67,7 +81,7 @@ export async function createAsset(asset, companyId) {
 export async function updateAsset(assetId, updates) {
   const { data, error } = await supabase
     .from('assets')
-    .update(updates)
+    .update(sanitiseAsset(updates))
     .eq('id', assetId)
     .select()
     .single();

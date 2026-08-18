@@ -62,7 +62,12 @@ export default function AssetDialog({ open, onClose, onSaved, asset, categories 
       if (asset) {
         // Update
         if (photoFile) {
-          photoUrl = await uploadAssetPhoto(photoFile, company.id, asset.id);
+          try {
+            photoUrl = await uploadAssetPhoto(photoFile, company.id, asset.id);
+          } catch (uploadErr) {
+            console.warn('[FlyBy] Photo upload skipped:', uploadErr.message);
+            showToast('Asset saved but photo upload failed — create the "asset-images" storage bucket in Supabase', 'warning');
+          }
         }
         await updateAsset(asset.id, { ...form, photo_url: photoUrl, purchase_price: form.purchase_price || null });
         showToast('Asset updated');
@@ -70,10 +75,15 @@ export default function AssetDialog({ open, onClose, onSaved, asset, categories 
         // Create
         const created = await createAsset({ ...form, purchase_price: form.purchase_price || null }, company.id);
         if (photoFile) {
-          photoUrl = await uploadAssetPhoto(photoFile, company.id, created.id);
-          await updateAsset(created.id, { photo_url: photoUrl });
+          try {
+            photoUrl = await uploadAssetPhoto(photoFile, company.id, created.id);
+            await updateAsset(created.id, { photo_url: photoUrl });
+          } catch (uploadErr) {
+            console.warn('[FlyBy] Photo upload skipped:', uploadErr.message);
+            showToast('Asset created but photo upload failed — create the "asset-images" storage bucket in Supabase', 'warning');
+          }
         }
-        showToast('Asset created');
+        if (!photoFile) showToast('Asset created');
       }
       onSaved?.();
     } catch (err) { showToast(err.message, 'error'); }
