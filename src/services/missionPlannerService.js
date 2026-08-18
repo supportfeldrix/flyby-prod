@@ -72,32 +72,12 @@ export async function getMissionStats(companyId) {
 }
 
 export async function generateMissionNumber(companyId) {
-  const year = new Date().getFullYear();
-
-  // Upsert sequence row
-  const { data: seq, error: seqErr } = await supabase
-    .from('mission_sequences')
-    .upsert({ company_id: companyId, last_number: 1 }, { onConflict: 'company_id' })
-    .select()
-    .single();
-
-  if (seqErr) {
-    // Fallback: increment
-    const { data: existing } = await supabase
-      .from('mission_sequences')
-      .select('last_number')
-      .eq('company_id', companyId)
-      .single();
-
-    const nextNum = (existing?.last_number || 0) + 1;
-    await supabase.from('mission_sequences').update({ last_number: nextNum }).eq('company_id', companyId);
-    return `FLY-${year}-${String(nextNum).padStart(6, '0')}`;
-  }
-
-  // Increment
-  const nextNum = seq.last_number + 1;
-  await supabase.from('mission_sequences').update({ last_number: nextNum }).eq('company_id', companyId);
-  return `FLY-${year}-${String(nextNum).padStart(6, '0')}`;
+  // Call the atomic Postgres function — concurrency-safe, no race conditions
+  const { data, error } = await supabase.rpc('next_mission_number', {
+    p_company_id: companyId,
+  });
+  if (error) throw error;
+  return data;
 }
 
 export function calculateDuration(areaHectares) {

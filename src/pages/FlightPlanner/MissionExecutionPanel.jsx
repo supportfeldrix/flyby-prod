@@ -20,6 +20,9 @@ import { getChecklist, toggleChecklistItem, isChecklistComplete, getChecklistPro
 import { getFlightLog, addLogEntry } from '../../services/flightLogService';
 import { dispatchMission, startMission, pauseMission, resumeMission, completeMission, abortMission, cancelMission } from '../../services/missionExecutionService';
 import { updateMission, getMissions } from '../../services/missionPlannerService';
+import { generateMissionReport } from '../../services/missionReportService';
+import MissionReportDialog from '../../components/reports/MissionReportDialog';
+import MissionReportPreview from '../../components/reports/MissionReportPreview';
 import { supabase } from '../../lib/supabase';
 
 const statusColors = {
@@ -45,6 +48,9 @@ export default function MissionExecutionPanel({ open, onClose, mission: initialM
   const [abortReason, setAbortReason] = useState('');
   const [showAbort, setShowAbort] = useState(false);
   const [elapsed, setElapsed] = useState(0);
+  const [completionReport, setCompletionReport] = useState(null);
+  const [showReportDialog, setShowReportDialog] = useState(false);
+  const [previewReport, setPreviewReport] = useState(null);
   const timerRef = useRef(null);
 
   // Sync mission from prop
@@ -127,7 +133,16 @@ export default function MissionExecutionPanel({ open, onClose, mission: initialM
           break;
         case 'complete':
           await completeMission(mission, company.id, profile);
-          showToast('Mission completed — all stats updated');
+          // Auto-generate mission report
+          try {
+            const report = await generateMissionReport(mission.id, company.id, profile?.id, profile?.full_name);
+            setCompletionReport(report);
+            setShowReportDialog(true);
+          } catch (reportErr) {
+            console.error('Report generation failed:', reportErr);
+            // Mission still completed successfully — report error is non-blocking
+          }
+          showToast('Mission completed — report generated');
           break;
         case 'abort':
           await abortMission(mission, company.id, profile, abortReason, false);
@@ -153,6 +168,7 @@ export default function MissionExecutionPanel({ open, onClose, mission: initialM
   if (!mission) return null;
 
   return (
+    <>
     <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth PaperProps={{ sx: { borderRadius: '16px', maxHeight: '90vh' } }}>
       {/* Header */}
       <Box sx={{ px: 3, py: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid rgba(15,23,42,0.06)' }}>
@@ -336,5 +352,27 @@ export default function MissionExecutionPanel({ open, onClose, mission: initialM
         </Grid>
       </Box>
     </Dialog>
+
+    {/* Mission Report Completion Dialog */}
+    <MissionReportDialog
+      open={showReportDialog}
+      onClose={() => {
+        setShowReportDialog(false);
+        setCompletionReport(null);
+      }}
+      report={completionReport}
+      onPreview={(report) => {
+        setShowReportDialog(false);
+        setPreviewReport(report);
+      }}
+    />
+
+    {/* Mission Report Preview */}
+    <MissionReportPreview
+      open={!!previewReport}
+      onClose={() => setPreviewReport(null)}
+      report={previewReport}
+    />
+    </>
   );
 }
