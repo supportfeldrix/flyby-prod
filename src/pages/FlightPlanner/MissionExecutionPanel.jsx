@@ -24,6 +24,7 @@ import { generateMissionReport } from '../../services/missionReportService';
 import { checkPilotCompliance } from '../../services/pilotDocumentService';
 import MissionReportDialog from '../../components/reports/MissionReportDialog';
 import MissionReportPreview from '../../components/reports/MissionReportPreview';
+import InvoiceWizard from '../Commercial/InvoiceWizard';
 import { supabase } from '../../lib/supabase';
 
 const statusColors = {
@@ -53,6 +54,7 @@ export default function MissionExecutionPanel({ open, onClose, mission: initialM
   const [showReportDialog, setShowReportDialog] = useState(false);
   const [previewReport, setPreviewReport] = useState(null);
   const [complianceWarning, setComplianceWarning] = useState(null);
+  const [invoiceWizardOpen, setInvoiceWizardOpen] = useState(false);
   const timerRef = useRef(null);
 
   // Sync mission from prop
@@ -400,6 +402,10 @@ export default function MissionExecutionPanel({ open, onClose, mission: initialM
         setShowReportDialog(false);
         setPreviewReport(report);
       }}
+      onGenerateInvoice={() => {
+        setShowReportDialog(false);
+        setInvoiceWizardOpen(true);
+      }}
     />
 
     {/* Mission Report Preview */}
@@ -407,6 +413,14 @@ export default function MissionExecutionPanel({ open, onClose, mission: initialM
       open={!!previewReport}
       onClose={() => setPreviewReport(null)}
       report={previewReport}
+    />
+
+    {/* Invoice Wizard (from mission completion) */}
+    <InvoiceWizard
+      open={invoiceWizardOpen}
+      onClose={() => setInvoiceWizardOpen(false)}
+      onComplete={() => { setInvoiceWizardOpen(false); }}
+      preselectedMission={mission}
     />
     </>
   );

@@ -12,6 +12,7 @@ import { useAuth } from '../../hooks/useAuth';
 import { useToast } from '../../context/ToastContext';
 import { getInvoices, cancelInvoice, duplicateInvoice, updateInvoiceStatus } from '../../services/invoiceService';
 import ConfirmDialog from '../../components/common/ConfirmDialog';
+import InvoicePreviewDialog from './InvoicePreviewDialog';
 
 const statusStyles = {
   Draft: { color: '#64748B', bg: 'rgba(15,23,42,0.06)' },
@@ -32,7 +33,7 @@ function formatDate(dateStr) {
   return new Date(dateStr).toLocaleDateString('en-ZA', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
-export default function InvoicesTab() {
+export default function InvoicesTab({ onGenerateInvoice }) {
   const { company, profile } = useAuth();
   const { showToast } = useToast();
   const [invoices, setInvoices] = useState([]);
@@ -41,6 +42,7 @@ export default function InvoicesTab() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [cancelTarget, setCancelTarget] = useState(null);
   const [cancelling, setCancelling] = useState(false);
+  const [previewInvoiceId, setPreviewInvoiceId] = useState(null);
 
   const fetchInvoices = useCallback(async () => {
     if (!company?.id) return;
@@ -104,6 +106,9 @@ export default function InvoicesTab() {
           <MenuItem value="all">All Status</MenuItem>
           {Object.keys(statusStyles).map(s => <MenuItem key={s} value={s}>{s}</MenuItem>)}
         </TextField>
+        <Button variant="contained" size="small" startIcon={<AddIcon />} onClick={onGenerateInvoice} sx={{ borderRadius: '10px', textTransform: 'none', fontWeight: 600 }}>
+          Generate Invoice
+        </Button>
       </Box>
 
       {/* Invoice List */}
@@ -118,7 +123,7 @@ export default function InvoicesTab() {
           {invoices.map(inv => {
             const style = statusStyles[inv.status] || statusStyles.Draft;
             return (
-              <Paper key={inv.id} sx={{ p: 2.5, borderRadius: '12px', border: '1px solid rgba(15,23,42,0.04)', '&:hover': { boxShadow: '0 2px 8px rgba(0,0,0,0.04)' } }}>
+              <Paper key={inv.id} onClick={() => setPreviewInvoiceId(inv.id)} sx={{ p: 2.5, borderRadius: '12px', border: '1px solid rgba(15,23,42,0.04)', cursor: 'pointer', transition: 'all 0.15s', '&:hover': { boxShadow: '0 2px 8px rgba(0,0,0,0.04)', borderColor: 'rgba(22,163,74,0.15)' } }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                   {/* Invoice icon */}
                   <Box sx={{ width: 38, height: 38, borderRadius: '10px', bgcolor: style.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
@@ -154,7 +159,7 @@ export default function InvoicesTab() {
                   </Box>
 
                   {/* Actions */}
-                  <Box sx={{ display: 'flex', gap: 0.5 }}>
+                  <Box sx={{ display: 'flex', gap: 0.5 }} onClick={e => e.stopPropagation()}>
                     {inv.status === 'Draft' && (
                       <Tooltip title="Mark as Sent" arrow>
                         <IconButton size="small" onClick={() => handleMarkSent(inv)}>
@@ -190,6 +195,14 @@ export default function InvoicesTab() {
         onConfirm={handleCancel}
         onCancel={() => setCancelTarget(null)}
         loading={cancelling}
+      />
+
+      <InvoicePreviewDialog
+        open={!!previewInvoiceId}
+        onClose={() => { setPreviewInvoiceId(null); fetchInvoices(); }}
+        invoiceId={previewInvoiceId}
+        onVoid={(inv) => setCancelTarget(inv)}
+        onRefresh={fetchInvoices}
       />
     </Box>
   );

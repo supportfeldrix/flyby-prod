@@ -13,6 +13,7 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import DownloadIcon from '@mui/icons-material/Download';
 import PrintIcon from '@mui/icons-material/Print';
+import ReceiptLongIcon from '@mui/icons-material/ReceiptLong';
 import FlightTakeoffIcon from '@mui/icons-material/FlightTakeoff';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import GrassIcon from '@mui/icons-material/Grass';
@@ -26,7 +27,7 @@ import { formatDuration, formatArea } from '../../services/reportTemplateService
  * Shown immediately after a mission is completed.
  * Displays mission success stats and provides report actions.
  */
-export default function MissionReportDialog({ open, onClose, report, onPreview }) {
+export default function MissionReportDialog({ open, onClose, report, onPreview, onGenerateInvoice }) {
   const [downloading, setDownloading] = useState(false);
   const [printing, setPrinting] = useState(false);
 
@@ -296,6 +297,28 @@ export default function MissionReportDialog({ open, onClose, report, onPreview }
               Print Report
             </Button>
           </Box>
+
+          {/* Generate Invoice */}
+          {onGenerateInvoice && (
+            <Button
+              variant="outlined"
+              size="large"
+              startIcon={<ReceiptLongIcon />}
+              onClick={() => onGenerateInvoice?.()}
+              sx={{
+                borderRadius: '12px',
+                py: 1.2,
+                fontWeight: 600,
+                fontSize: '0.85rem',
+                textTransform: 'none',
+                borderColor: 'rgba(22,163,74,0.3)',
+                color: '#16A34A',
+                '&:hover': { borderColor: '#16A34A', bgcolor: 'rgba(22,163,74,0.04)' },
+              }}
+            >
+              Generate Invoice
+            </Button>
+          )}
 
           <Button
             onClick={onClose}

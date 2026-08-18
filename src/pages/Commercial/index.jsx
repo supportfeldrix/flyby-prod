@@ -18,6 +18,7 @@ import PaymentsTab from './PaymentsTab';
 import ProfitabilityTab from './ProfitabilityTab';
 import AnalyticsTab from './AnalyticsTab';
 import SettingsTab from './SettingsTab';
+import InvoiceWizard from './InvoiceWizard';
 
 const MotionBox = motion.create(Box);
 
@@ -81,6 +82,8 @@ export default function Commercial() {
   const [tab, setTab] = useState(0);
   const [kpis, setKpis] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [wizardOpen, setWizardOpen] = useState(false);
+  const [wizardMission, setWizardMission] = useState(null);
 
   const fetchKPIs = useCallback(async () => {
     if (!company?.id) return;
@@ -185,8 +188,8 @@ export default function Commercial() {
 
           {/* Tab Content */}
           <Box sx={{ p: 3 }}>
-            {tab === 0 && <CommercialOverview kpis={kpis} onRefresh={fetchKPIs} />}
-            {tab === 1 && <InvoicesTab />}
+            {tab === 0 && <CommercialOverview kpis={kpis} onRefresh={fetchKPIs} onGenerateInvoice={() => setWizardOpen(true)} />}
+            {tab === 1 && <InvoicesTab onGenerateInvoice={() => setWizardOpen(true)} />}
             {tab === 2 && <CustomersTab />}
             {tab === 3 && <PaymentsTab />}
             {tab === 4 && <ProfitabilityTab />}
@@ -195,6 +198,14 @@ export default function Commercial() {
           </Box>
         </Paper>
       </MotionBox>
+
+      {/* Invoice Wizard */}
+      <InvoiceWizard
+        open={wizardOpen}
+        onClose={() => { setWizardOpen(false); setWizardMission(null); }}
+        onComplete={() => { fetchKPIs(); }}
+        preselectedMission={wizardMission}
+      />
     </Box>
   );
 }

@@ -17,7 +17,7 @@ function formatDate(dateStr) {
   return new Date(dateStr).toLocaleDateString('en-ZA', { day: 'numeric', month: 'short' });
 }
 
-export default function CommercialOverview({ kpis, onRefresh }) {
+export default function CommercialOverview({ kpis, onRefresh, onGenerateInvoice }) {
   const { company } = useAuth();
   const [recentPayments, setRecentPayments] = useState([]);
   const [dueInvoices, setDueInvoices] = useState([]);
@@ -34,7 +34,7 @@ export default function CommercialOverview({ kpis, onRefresh }) {
     <Box>
       {/* Quick Actions */}
       <Box sx={{ display: 'flex', gap: 1.5, mb: 3, flexWrap: 'wrap' }}>
-        <Button variant="contained" startIcon={<AddIcon />} size="small" sx={{ borderRadius: '10px', textTransform: 'none', fontWeight: 600 }}>
+        <Button variant="contained" startIcon={<AddIcon />} size="small" onClick={onGenerateInvoice} sx={{ borderRadius: '10px', textTransform: 'none', fontWeight: 600 }}>
           Generate Invoice
         </Button>
         <Button variant="outlined" startIcon={<PaymentsIcon />} size="small" sx={{ borderRadius: '10px', textTransform: 'none', fontWeight: 600, borderColor: 'rgba(15,23,42,0.12)' }}>
