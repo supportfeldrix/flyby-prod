@@ -7,13 +7,15 @@ import CancelIcon from '@mui/icons-material/Cancel';
 import FlightTakeoffIcon from '@mui/icons-material/FlightTakeoff';
 import { useAuth } from '../../hooks/useAuth';
 import { useToast } from '../../context/ToastContext';
+import { supabase } from '../../lib/supabase';
 import { getCustomers } from '../../services/customerService';
 import { getFarmsByCustomer } from '../../services/farmService';
 import { getFieldsByFarm } from '../../services/fieldService';
 import { getAircraft } from '../../services/aircraftService';
 import { getPilots } from '../../services/pilotService';
 import { getBatteries } from '../../services/batteryService';
-import { getEquipment } from '../../services/equipmentService';
+import { getAssets } from '../../services/assetService';
+import { assignAssetsToMission } from '../../services/missionAssetService';
 import { getCurrentWeather, getHourlyForecast } from '../../services/weatherService';
 import { evaluateFieldConditions, calculateFlightRisk } from '../../services/weatherDecisionService';
 import { getTodaySprayWindow, formatSprayWindow } from '../../services/sprayWindowService';
@@ -40,6 +42,7 @@ export default function MissionWizard({ open, onClose, onCreated }) {
 
   // Selections
   const [sel, setSel] = useState({ customer: null, farm: null, field: null, aircraft: null, pilot: null, battery: null, equipment: null });
+  const [selectedAssetIds, setSelectedAssetIds] = useState([]);
   const [weather, setWeather] = useState(null);
   const [hourly, setHourly] = useState([]);
   const [details, setDetails] = useState({ scheduled_date: new Date().toISOString().split('T')[0], priority: 'Normal', application_type: 'Spray', chemical_name: '', application_rate: '', dispatcher_notes: '' });
@@ -51,8 +54,9 @@ export default function MissionWizard({ open, onClose, onCreated }) {
       getAircraft(company.id).then(setAircraftList).catch(() => {});
       getPilots(company.id).then(setPilotList).catch(() => {});
       getBatteries(company.id).then(setBatteryList).catch(() => {});
-      getEquipment(company.id).then(setEquipmentList).catch(() => {});
+      getAssets(company.id, { status: 'Available' }).then(setEquipmentList).catch(() => {});
       setSel({ customer: null, farm: null, field: null, aircraft: null, pilot: null, battery: null, equipment: null });
+      setSelectedAssetIds([]);
       setStep(0);
       setWeather(null);
       setDetails({ scheduled_date: new Date().toISOString().split('T')[0], priority: 'Normal', application_type: 'Spray', chemical_name: '', application_rate: '', dispatcher_notes: '' });
@@ -135,6 +139,13 @@ export default function MissionWizard({ open, onClose, onCreated }) {
         dispatcher_notes: details.dispatcher_notes || null,
       };
       await createMission(mission);
+      // Assign selected assets to mission
+      if (selectedAssetIds.length > 0) {
+        try {
+          const { data: created } = await supabase.from('missions').select('id').eq('mission_number', missionNumber).eq('company_id', company.id).single();
+          if (created) await assignAssetsToMission(created.id, selectedAssetIds, company.id);
+        } catch (assetErr) { console.warn('[FlyBy] Asset assignment skipped:', assetErr.message); }
+      }
       showToast(`Mission ${missionNumber} created successfully`);
       onCreated?.();
       onClose();
@@ -234,11 +245,33 @@ export default function MissionWizard({ open, onClose, onCreated }) {
       );
       case 7: return (
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-          <Typography sx={{ fontSize: '0.8rem', color: 'text.secondary', mb: 1 }}>Optional — assign equipment for this mission.</Typography>
-          {equipmentList.filter(e => e.status === 'Ready').map(e => (
-            <SelectionCard key={e.id} selected={sel.equipment?.id === e.id} onClick={() => setSel(p => ({ ...p, equipment: sel.equipment?.id === e.id ? null : e }))} primary={e.equipment_name} secondary={e.equipment_type} />
-          ))}
-          {equipmentList.filter(e => e.status === 'Ready').length === 0 && <Typography sx={{ color: 'text.secondary', textAlign: 'center', py: 4 }}>No equipment available.</Typography>}
+          <Typography sx={{ fontSize: '0.8rem', color: 'text.secondary', mb: 1 }}>Optional — select assets for this mission (generators, chargers, water systems, etc.)</Typography>
+          {equipmentList.length === 0 && <Typography sx={{ color: 'text.secondary', textAlign: 'center', py: 4 }}>No available assets. Register assets in the Assets module.</Typography>}
+          {equipmentList.map(a => {
+            const checked = selectedAssetIds.includes(a.id);
+            return (
+              <Paper
+                key={a.id}
+                onClick={() => {
+                  setSelectedAssetIds(prev => checked ? prev.filter(id => id !== a.id) : [...prev, a.id]);
+                }}
+                sx={{ p: 2, cursor: 'pointer', border: checked ? '2px solid #16A34A' : '1px solid rgba(15,23,42,0.06)', borderRadius: '12px', bgcolor: checked ? 'rgba(22,163,74,0.03)' : '#FFFFFF', transition: 'all 0.15s', '&:hover': { borderColor: checked ? '#16A34A' : 'rgba(15,23,42,0.15)' } }}
+              >
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Box>
+                    <Typography sx={{ fontSize: '0.9rem', fontWeight: 600 }}>{a.asset_name}</Typography>
+                    <Typography sx={{ fontSize: '0.75rem', color: 'text.secondary' }}>
+                      {[a.category_name || a.asset_categories?.name, a.brand, a.model].filter(Boolean).join(' • ')}
+                    </Typography>
+                  </Box>
+                  {checked && <CheckCircleIcon sx={{ color: '#16A34A', fontSize: '1.2rem' }} />}
+                </Box>
+              </Paper>
+            );
+          })}
+          {selectedAssetIds.length > 0 && (
+            <Chip label={`${selectedAssetIds.length} asset${selectedAssetIds.length !== 1 ? 's' : ''} selected`} sx={{ alignSelf: 'flex-start', fontWeight: 600, fontSize: '0.75rem', bgcolor: 'rgba(22,163,74,0.08)', color: '#16A34A' }} />
+          )}
         </Box>
       );
       case 8: return (
