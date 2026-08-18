@@ -22,6 +22,7 @@ import { dispatchMission, startMission, pauseMission, resumeMission, completeMis
 import { updateMission, getMissions } from '../../services/missionPlannerService';
 import { generateMissionReport } from '../../services/missionReportService';
 import { checkPilotCompliance } from '../../services/pilotDocumentService';
+import { activateMissionAssets, releaseMissionAssets } from '../../services/missionAssetService';
 import MissionReportDialog from '../../components/reports/MissionReportDialog';
 import MissionReportPreview from '../../components/reports/MissionReportPreview';
 import InvoiceWizard from '../Commercial/InvoiceWizard';
@@ -142,6 +143,8 @@ export default function MissionExecutionPanel({ open, onClose, mission: initialM
           // Log checklist complete first
           await addLogEntry(mission.id, company.id, 'checklist_complete', 'Pre-flight checklist complete', profile?.id, profile?.full_name);
           await startMission(mission, company.id, profile);
+          // Activate mission assets (set to 'In Mission')
+          try { await activateMissionAssets(mission.id); } catch (e) { console.warn('[FlyBy] Asset activation skipped:', e.message); }
           showToast('Mission started — aircraft airborne');
           break;
         case 'pause':
@@ -154,6 +157,8 @@ export default function MissionExecutionPanel({ open, onClose, mission: initialM
           break;
         case 'complete':
           await completeMission(mission, company.id, profile);
+          // Release mission assets (set back to 'Available')
+          try { await releaseMissionAssets(mission.id); } catch (e) { console.warn('[FlyBy] Asset release skipped:', e.message); }
           // Auto-generate mission report after completion
           try {
             console.log('[FlyBy] Mission completed. Generating report for mission:', mission.id);

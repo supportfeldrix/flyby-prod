@@ -19,6 +19,7 @@ import Farms from './pages/Farms';
 import Customers from './pages/Customers';
 import Pilots from './pages/Pilots';
 import Fleet from './pages/Fleet';
+import Assets from './pages/Assets';
 import Batteries from './pages/Batteries';
 import Weather from './pages/Weather';
 import Reports from './pages/Reports';
@@ -88,6 +89,7 @@ function App() {
                 <Route path="customers" element={<Customers />} />
                 <Route path="pilots" element={<Pilots />} />
                 <Route path="fleet" element={<Fleet />} />
+                <Route path="assets" element={<Assets />} />
               <Route path="batteries" element={<Batteries />} />
                 <Route path="weather" element={<Weather />} />
                 <Route path="commercial" element={<Commercial />} />
