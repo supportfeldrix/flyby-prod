@@ -23,6 +23,8 @@ import { updateMission, getMissions } from '../../services/missionPlannerService
 import { generateMissionReport } from '../../services/missionReportService';
 import { checkPilotCompliance } from '../../services/pilotDocumentService';
 import { activateMissionAssets, releaseMissionAssets } from '../../services/missionAssetService';
+import MissionRoutePanel from '../../components/missions/MissionRoutePanel';
+import FlightDataPanel from '../../components/missions/FlightDataPanel';
 import MissionReportDialog from '../../components/reports/MissionReportDialog';
 import MissionReportPreview from '../../components/reports/MissionReportPreview';
 import InvoiceWizard from '../Commercial/InvoiceWizard';
@@ -362,6 +364,18 @@ export default function MissionExecutionPanel({ open, onClose, mission: initialM
                 <Typography sx={{ fontWeight: 600, mb: 0.5 }}>Mission {status}</Typography>
                 {mission.completion_notes && <Typography sx={{ fontSize: '0.8rem' }}>{mission.completion_notes}</Typography>}
               </Alert>
+            )}
+
+            {/* Flight Route & Data — shown for Planned/Completed missions */}
+            {['Planned', 'Ready', 'Dispatched', 'Completed'].includes(status) && (
+              <Box sx={{ mt: 3 }}>
+                <MissionRoutePanel mission={mission} />
+              </Box>
+            )}
+            {status === 'Completed' && (
+              <Box sx={{ mt: 3 }}>
+                <FlightDataPanel mission={mission} />
+              </Box>
             )}
           </Grid>
 

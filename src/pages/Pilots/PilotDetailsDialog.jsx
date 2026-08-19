@@ -15,6 +15,7 @@ import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import { supabase } from '../../lib/supabase';
 import MissionExecutionPanel from '../FlightPlanner/MissionExecutionPanel';
 import PilotDocuments from '../../components/pilots/PilotDocuments';
+import DjiConnectionPanel from '../../components/pilots/DjiConnectionPanel';
 
 const statusStyles = {
   Available: { color: '#16A34A', bg: 'rgba(22, 163, 74, 0.08)' },
@@ -117,6 +118,7 @@ export default function PilotDetailsDialog({ open, onClose, pilot, onEdit }) {
             <Tab icon={<BarChartIcon sx={{ fontSize: '1rem' }} />} iconPosition="start" label="Statistics" />
             <Tab icon={<HistoryIcon sx={{ fontSize: '1rem' }} />} iconPosition="start" label="Missions" />
             <Tab icon={<DescriptionIcon sx={{ fontSize: '1rem' }} />} iconPosition="start" label="Documents" />
+            <Tab icon={<FlightIcon sx={{ fontSize: '1rem' }} />} iconPosition="start" label="Drone Data" />
           </Tabs>
         </Box>
 
@@ -235,6 +237,11 @@ export default function PilotDetailsDialog({ open, onClose, pilot, onEdit }) {
           {/* DOCUMENTS */}
           <TabPanel value={tab} index={5}>
             <PilotDocuments pilot={pilot} />
+          </TabPanel>
+
+          {/* DRONE DATA */}
+          <TabPanel value={tab} index={6}>
+            <DjiConnectionPanel pilot={pilot} />
           </TabPanel>
         </DialogContent>
 
