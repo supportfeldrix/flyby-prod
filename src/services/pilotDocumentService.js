@@ -111,31 +111,32 @@ export async function uploadDocument({ file, pilotId, companyId, documentType, d
     });
   if (uploadError) throw new Error(`File upload failed: ${uploadError.message}`);
 
-  // Insert document record
-  const { data, error: insertError } = await supabase
-    .from('pilot_documents')
-    .insert({
-      company_id: companyId,
-      pilot_id: pilotId,
-      document_type: documentType,
-      document_name: documentName || getDocumentTypeLabel(documentType),
-      file_name: file.name,
-      storage_path: storagePath,
-      file_size: file.size,
-      mime_type: file.type,
-      issue_date: issueDate || null,
-      expiry_date: expiryDate || null,
-      notes: notes || null,
-      uploaded_by: userId,
-      uploaded_by_name: userName,
-    })
-    .select()
-    .single();
+  // Insert document record via RPC (bypasses RLS issues)
+  const { data, error: insertError } = await supabase.rpc('insert_pilot_document', {
+    p_company_id: companyId,
+    p_pilot_id: pilotId,
+    p_document_type: documentType,
+    p_document_name: documentName || getDocumentTypeLabel(documentType),
+    p_file_name: file.name,
+    p_storage_path: storagePath,
+    p_file_size: file.size,
+    p_mime_type: file.type,
+    p_issue_date: issueDate || null,
+    p_expiry_date: expiryDate || null,
+    p_notes: notes || null,
+    p_uploaded_by: userId || null,
+    p_uploaded_by_name: userName || null,
+  });
 
   if (insertError) {
     // Cleanup uploaded file on DB failure
     await supabase.storage.from(STORAGE_BUCKET).remove([storagePath]);
     throw new Error(`Failed to save document record: ${insertError.message}`);
+  }
+
+  if (data?.error) {
+    await supabase.storage.from(STORAGE_BUCKET).remove([storagePath]);
+    throw new Error(data.error);
   }
 
   return data;

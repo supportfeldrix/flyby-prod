@@ -222,3 +222,46 @@ export async function deleteBoundary(fieldId) {
 
   if (error) throw error;
 }
+
+
+/**
+ * Calculate the centroid (geometric centre) of a GeoJSON Polygon.
+ * Returns { lat, lng } or null if invalid.
+ */
+export function getPolygonCentroid(geojson) {
+  if (!geojson?.coordinates?.[0] || geojson.coordinates[0].length < 4) return null;
+
+  const ring = geojson.coordinates[0];
+  // Average of all points (excluding closing duplicate)
+  const points = ring.slice(0, -1);
+  const n = points.length;
+  if (n === 0) return null;
+
+  const sumLng = points.reduce((s, p) => s + p[0], 0);
+  const sumLat = points.reduce((s, p) => s + p[1], 0);
+
+  return {
+    lat: sumLat / n,
+    lng: sumLng / n,
+  };
+}
+
+/**
+ * Resolve a field's location for weather requests.
+ * Priority: explicit lat/lng → boundary centroid → null
+ */
+export function resolveFieldLocation(field) {
+  if (!field) return null;
+
+  // Priority 1: explicit coordinates
+  if (field.latitude && field.longitude) {
+    return { lat: field.latitude, lng: field.longitude };
+  }
+
+  // Priority 2: boundary centroid
+  if (field.boundary?.coordinates) {
+    return getPolygonCentroid(field.boundary);
+  }
+
+  return null;
+}

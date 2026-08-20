@@ -12,32 +12,38 @@ const ONE_CALL_URL = 'https://api.openweathermap.org/data/3.0/onecall';
  * Get current weather for a location.
  */
 export async function getCurrentWeather(lat, lng) {
-  if (!API_KEY) return getMockCurrentWeather();
+  if (!API_KEY) return { ...getMockCurrentWeather(), _isMock: true };
 
-  const res = await fetch(
-    `${BASE_URL}/weather?lat=${lat}&lon=${lng}&units=metric&appid=${API_KEY}`
-  );
-  if (!res.ok) throw new Error('Failed to fetch weather data');
-  const data = await res.json();
+  try {
+    const res = await fetch(
+      `${BASE_URL}/weather?lat=${lat}&lon=${lng}&units=metric&appid=${API_KEY}`
+    );
+    if (!res.ok) throw new Error(`Weather API error: ${res.status}`);
+    const data = await res.json();
 
-  return {
-    temperature: Math.round(data.main.temp),
-    feelsLike: Math.round(data.main.feels_like),
-    humidity: data.main.humidity,
-    pressure: data.main.pressure,
-    windSpeed: Math.round(data.wind.speed * 3.6), // m/s to km/h
-    windDirection: data.wind.deg,
-    windGust: data.wind.gust ? Math.round(data.wind.gust * 3.6) : null,
-    visibility: data.visibility / 1000, // metres to km
-    cloudCover: data.clouds.all,
-    condition: data.weather[0].main,
-    description: data.weather[0].description,
-    icon: data.weather[0].icon,
-    rain: data.rain?.['1h'] || 0,
-    sunrise: new Date(data.sys.sunrise * 1000),
-    sunset: new Date(data.sys.sunset * 1000),
-    timestamp: new Date(),
-  };
+    return {
+      temperature: Math.round(data.main.temp),
+      feelsLike: Math.round(data.main.feels_like),
+      humidity: data.main.humidity,
+      pressure: data.main.pressure,
+      windSpeed: Math.round(data.wind.speed * 3.6), // m/s to km/h
+      windDirection: data.wind.deg,
+      windGust: data.wind.gust ? Math.round(data.wind.gust * 3.6) : null,
+      visibility: data.visibility / 1000, // metres to km
+      cloudCover: data.clouds.all,
+      condition: data.weather[0].main,
+      description: data.weather[0].description,
+      icon: data.weather[0].icon,
+      rain: data.rain?.['1h'] || 0,
+      sunrise: new Date(data.sys.sunrise * 1000),
+      sunset: new Date(data.sys.sunset * 1000),
+      timestamp: new Date(),
+      _isMock: false,
+    };
+  } catch (err) {
+    console.error('[FlyBy] Weather API failed:', err.message);
+    return { ...getMockCurrentWeather(), _isMock: true, _error: err.message };
+  }
 }
 
 /**
