@@ -114,7 +114,10 @@ export default function DocumentUploadDialog({ open, onClose, onComplete, pilot,
       }
       onComplete?.();
     } catch (err) {
-      showToast(err.message, 'error');
+      const msg = err.message?.includes('Bucket not found') || err.message?.includes('bucket')
+        ? 'Storage bucket "pilot-documents" not found. Create it in Supabase Dashboard → Storage.'
+        : err.message;
+      showToast(msg, 'error');
     } finally {
       setUploading(false);
     }

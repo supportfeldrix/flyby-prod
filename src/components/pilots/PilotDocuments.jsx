@@ -7,7 +7,6 @@ import {
   getPilotDocuments,
   deleteDocument,
   downloadDocument,
-  DOCUMENT_TYPES,
   calculateCompliance,
 } from '../../services/pilotDocumentService';
 import DocumentCard from './DocumentCard';
@@ -91,12 +90,6 @@ export default function PilotDocuments({ pilot }) {
     fetchDocuments();
   };
 
-  // Build document cards — show all types with uploaded or placeholder
-  const documentCards = DOCUMENT_TYPES.map(type => {
-    const doc = documents.find(d => d.document_type === type.value);
-    return { type, document: doc };
-  });
-
   return (
     <Box>
       {/* Compliance Summary */}
@@ -118,19 +111,27 @@ export default function PilotDocuments({ pilot }) {
         </Button>
       </Box>
 
-      {/* Document Cards */}
+      {/* Document Cards — only show uploaded documents */}
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-        {documentCards.map(({ type, document: doc }) => (
-          <DocumentCard
-            key={type.value}
-            document={doc || { document_type: type.value }}
-            onPreview={(d) => setPreviewDoc(d)}
-            onDownload={handleDownload}
-            onReplace={handleReplace}
-            onDelete={(d) => setDeleteTarget(d)}
-            onUpload={() => handleUploadForType(type.value)}
-          />
-        ))}
+        {documents.length === 0 ? (
+          <Box sx={{ textAlign: 'center', py: 4 }}>
+            <Typography sx={{ fontSize: '0.85rem', color: 'text.tertiary' }}>
+              No documents uploaded yet. Click "Upload Document" to add compliance documents.
+            </Typography>
+          </Box>
+        ) : (
+          documents.map((doc) => (
+            <DocumentCard
+              key={doc.id}
+              document={doc}
+              onPreview={(d) => setPreviewDoc(d)}
+              onDownload={handleDownload}
+              onReplace={handleReplace}
+              onDelete={(d) => setDeleteTarget(d)}
+              onUpload={() => handleUploadForType(doc.document_type)}
+            />
+          ))
+        )}
       </Box>
 
       {/* Upload Dialog */}
