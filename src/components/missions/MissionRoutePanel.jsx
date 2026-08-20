@@ -7,6 +7,7 @@ import RefreshIcon from '@mui/icons-material/Refresh';
 import SaveIcon from '@mui/icons-material/Save';
 import DeleteIcon from '@mui/icons-material/Delete';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
+import SyncIcon from '@mui/icons-material/Sync';
 import MapIcon from '@mui/icons-material/Map';
 import SpeedIcon from '@mui/icons-material/Speed';
 import HeightIcon from '@mui/icons-material/Height';
@@ -385,31 +386,31 @@ export default function MissionRoutePanel({ mission, onRouteChange }) {
           sx={{ borderRadius: '10px', mb: 2 }}
         >
           <Typography sx={{ fontSize: '0.8rem', fontWeight: 600 }}>
-            {route.status === 'Exported' && 'Field prepared for DJI SmartFarm.'}
-            {route.status === 'Prepared' && 'Route prepared. Export when ready for SmartFarm.'}
-            {route.status === 'Synced' && 'Route synced with DJI SmartFarm.'}
-            {route.status === 'Ready on DJI' && 'Route available on DJI remote controller.'}
-            {route.status === 'Waiting for DJI' && 'Waiting for DJI confirmation...'}
-            {route.status === 'Failed' && 'Export failed. Try again.'}
+            {route.status === 'Exported' && 'Mission data prepared. Awaiting DJI SmartFarm sync.'}
+            {route.status === 'Prepared' && 'Route prepared. Ready to sync to DJI SmartFarm.'}
+            {route.status === 'Synced' && '🟢 Mission synced to DJI SmartFarm.'}
+            {route.status === 'Ready on DJI' && '🟢 Route available on T50 remote controller.'}
+            {route.status === 'Waiting for DJI' && 'Syncing to DJI SmartFarm...'}
+            {route.status === 'Failed' && 'Sync failed. Use Import Flight Data as fallback.'}
           </Typography>
-          {route.status === 'Exported' && (
+          {route.status === 'Exported' && route.sync_status !== 'synced' && (
             <Typography sx={{ fontSize: '0.7rem', color: 'text.secondary', mt: 0.5 }}>
-              Complete the official DJI SmartFarm import/share step to make the field available on your T50 remote.
+              Official DJI SmartFarm integration will sync automatically when connected. Use Import Flight Data as fallback.
             </Typography>
           )}
         </Alert>
       )}
 
-      {/* Export Field to SmartFarm — primary action */}
+      {/* Primary action: Sync to DJI SmartFarm */}
       {route && (
         <Box sx={{ display: 'flex', gap: 1.5, mt: 2 }}>
           <Button
             variant="contained"
-            startIcon={<DownloadIcon />}
+            startIcon={<SyncIcon />}
             onClick={handleExport}
             sx={{ borderRadius: '10px', textTransform: 'none', fontWeight: 600 }}
           >
-            Export Field to SmartFarm
+            Sync to DJI SmartFarm
           </Button>
           <Button
             variant="outlined"
@@ -423,10 +424,10 @@ export default function MissionRoutePanel({ mission, onRouteChange }) {
         </Box>
       )}
 
-      {/* Export explanation */}
-      {route && route.status !== 'Exported' && (
+      {/* Sync explanation */}
+      {route && !route.sync_status?.includes('synced') && route.status !== 'Synced' && (
         <Typography sx={{ fontSize: '0.7rem', color: 'text.tertiary', mt: 1.5 }}>
-          FlyBy will prepare your field boundary and route. Use DJI SmartFarm to import/share the field to your T50 remote controller.
+          When DJI SmartFarm integration is connected, this will sync directly to your T50 remote. Until then, the mission data is prepared and exported for manual transfer.
         </Typography>
       )}
     </Box>

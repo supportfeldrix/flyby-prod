@@ -3,7 +3,6 @@ import { Box, Typography, Paper, Button, Chip, Alert, Divider, Dialog, DialogTit
 import LinkIcon from '@mui/icons-material/Link';
 import LinkOffIcon from '@mui/icons-material/LinkOff';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
-import CloudDownloadIcon from '@mui/icons-material/CloudDownload';
 import FlightIcon from '@mui/icons-material/Flight';
 import AirplanemodeActiveIcon from '@mui/icons-material/AirplanemodeActive';
 import SyncIcon from '@mui/icons-material/Sync';
@@ -11,6 +10,7 @@ import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import RadioButtonUncheckedIcon from '@mui/icons-material/RadioButtonUnchecked';
+import HistoryIcon from '@mui/icons-material/History';
 import { getDjiConnection, getDjiDevices, importFlightDataFromFile } from '../../services/djiMissionService';
 import { useAuth } from '../../hooks/useAuth';
 import { useToast } from '../../context/ToastContext';
@@ -20,7 +20,7 @@ const DJI_SMARTFARM_URL = 'https://www.djiag.com/za/login';
 
 const connectionStatusConfig = {
   not_connected: { color: '#64748B', bg: 'rgba(100,116,139,0.08)', label: 'Not Connected', icon: RadioButtonUncheckedIcon },
-  not_configured: { color: '#64748B', bg: 'rgba(100,116,139,0.08)', label: 'Not Connected', icon: RadioButtonUncheckedIcon },
+  not_configured: { color: '#64748B', bg: 'rgba(100,116,139,0.08)', label: 'Integration Not Configured', icon: RadioButtonUncheckedIcon },
   connecting: { color: '#D97706', bg: 'rgba(217,119,6,0.08)', label: 'Connecting', icon: SyncIcon },
   pending: { color: '#D97706', bg: 'rgba(217,119,6,0.08)', label: 'Pending', icon: SyncIcon },
   connected: { color: '#16A34A', bg: 'rgba(22,163,74,0.08)', label: 'Connected', icon: CheckCircleIcon },
@@ -34,11 +34,8 @@ const connectionStatusConfig = {
 /**
  * DJI SmartFarm Connection Centre — Pilot Profile → Drone Data
  * 
- * Clearly separates:
- * 1. FlyBy Fleet aircraft (what the company owns)
- * 2. DJI SmartFarm connection (pilot's DJI environment)
- * 3. DJI-discovered aircraft (from official integration)
- * 4. Link between DJI aircraft and FlyBy Fleet aircraft
+ * Primary workflow: FlyBy → Sync → DJI SmartFarm → T50 → Flight Data → FlyBy
+ * Fallback: Import/Export when official integration isn't configured.
  */
 export default function DjiConnectionPanel({ pilot }) {
   const { company } = useAuth();
@@ -57,7 +54,6 @@ export default function DjiConnectionPanel({ pilot }) {
     Promise.all([
       getDjiConnection(pilot.id).catch(() => null),
       getDjiDevices(company.id).catch(() => []),
-      // Get Fleet aircraft (DJI manufacturer) to show in the panel
       supabase.from('aircraft').select('id, aircraft_name, manufacturer, model, serial_number, registration_number, status')
         .eq('company_id', company.id).eq('is_active', true)
         .ilike('manufacturer', '%DJI%')
@@ -74,17 +70,11 @@ export default function DjiConnectionPanel({ pilot }) {
   const config = connectionStatusConfig[connStatus] || connectionStatusConfig.not_connected;
   const StatusIcon = config.icon;
 
-  // Check if any DJI device is linked to a Fleet aircraft
-  const linkedDevices = devices.filter(d => d.aircraft_id);
-  const unlinkedDevices = devices.filter(d => !d.aircraft_id);
-
   const handleOpenSmartFarm = () => {
     window.open(DJI_SMARTFARM_URL, '_blank', 'noopener,noreferrer');
   };
 
   const handleConnectClick = () => {
-    // Check if official DJI OAuth is configured
-    // Since it's not currently available for T50, show explanation dialog
     setConnectDialogOpen(true);
   };
 
@@ -106,10 +96,9 @@ export default function DjiConnectionPanel({ pilot }) {
   return (
     <Box>
       {/* ═══════════════════════════════════════════════════════════════ */}
-      {/* SECTION 1: DJI SMARTFARM CONNECTION                           */}
+      {/* DJI SMARTFARM CONNECTION                                       */}
       {/* ═══════════════════════════════════════════════════════════════ */}
       <Paper variant="outlined" sx={{ p: 3, borderRadius: '14px', mb: 3, border: `1px solid ${isConnected ? 'rgba(22,163,74,0.2)' : 'rgba(15,23,42,0.06)'}` }}>
-        {/* Header */}
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
             <Box sx={{ width: 44, height: 44, borderRadius: '12px', bgcolor: config.bg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -155,70 +144,62 @@ export default function DjiConnectionPanel({ pilot }) {
           </Box>
         )}
 
-        {/* Not Connected — explanation */}
+        {/* Not Connected — primary CTA is Connect */}
         {!isConnected && (
           <Typography sx={{ fontSize: '0.85rem', color: 'text.secondary', lineHeight: 1.6, mb: 2 }}>
-            Connect your DJI SmartFarm environment to FlyBy to prepare missions and bring flight data back into FlyBy when supported.
+            Connect your DJI SmartFarm to sync missions directly from FlyBy to your T50 remote controller, and automatically receive flight data after every operation.
           </Typography>
         )}
 
-        {/* Action Buttons */}
+        {/* Actions */}
         <Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap' }}>
-          {isConnected && (
+          {isConnected ? (
             <Button variant="contained" size="small" startIcon={<SyncIcon />} sx={{ borderRadius: '10px', textTransform: 'none', fontWeight: 600, fontSize: '0.8rem' }}>
-              Sync Data
+              Sync Now
+            </Button>
+          ) : (
+            <Button variant="contained" size="small" startIcon={<LinkIcon />} onClick={handleConnectClick} sx={{ borderRadius: '10px', textTransform: 'none', fontWeight: 600, fontSize: '0.8rem' }}>
+              Connect DJI SmartFarm
             </Button>
           )}
           <Button
-            variant={isConnected ? 'outlined' : 'contained'}
+            variant="outlined"
             size="small"
             startIcon={<CloudUploadIcon />}
             onClick={() => fileRef.current?.click()}
             disabled={importing}
-            sx={{ borderRadius: '10px', textTransform: 'none', fontWeight: 600, fontSize: '0.8rem', ...(isConnected ? { borderColor: 'rgba(15,23,42,0.12)', color: 'text.primary' } : {}) }}
+            sx={{ borderRadius: '10px', textTransform: 'none', fontWeight: 600, fontSize: '0.8rem', borderColor: 'rgba(15,23,42,0.12)', color: 'text.primary' }}
           >
             {importing ? 'Importing...' : 'Import Flight Data'}
           </Button>
           <input ref={fileRef} type="file" hidden accept=".json,.csv" onChange={handleImportFlightData} />
-          {!isConnected && (
-            <Button
-              variant="outlined"
-              size="small"
-              startIcon={<LinkIcon />}
-              onClick={handleConnectClick}
-              sx={{ borderRadius: '10px', textTransform: 'none', fontWeight: 600, fontSize: '0.8rem', borderColor: 'rgba(15,23,42,0.12)', color: 'text.primary' }}
-            >
-              Connect DJI / SmartFarm
-            </Button>
-          )}
         </Box>
       </Paper>
 
       {/* ═══════════════════════════════════════════════════════════════ */}
-      {/* SECTION 2: FLYBY FLEET AIRCRAFT                               */}
+      {/* FLYBY FLEET AIRCRAFT                                          */}
       {/* ═══════════════════════════════════════════════════════════════ */}
       <Paper variant="outlined" sx={{ p: 2.5, borderRadius: '12px', mb: 3 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
           <Typography sx={{ fontSize: '0.7rem', fontWeight: 700, color: 'text.tertiary', textTransform: 'uppercase', letterSpacing: '0.03em' }}>
-            FlyBy Fleet Aircraft
+            Fleet Aircraft
           </Typography>
-          <Chip label="Fleet" size="small" sx={{ height: 18, fontSize: '0.55rem', fontWeight: 700, bgcolor: 'rgba(37,99,235,0.08)', color: '#2563EB' }} />
+          <Chip label="FlyBy Fleet" size="small" sx={{ height: 18, fontSize: '0.55rem', fontWeight: 700, bgcolor: 'rgba(37,99,235,0.08)', color: '#2563EB' }} />
         </Box>
 
         {fleetAircraft.length === 0 ? (
           <Box sx={{ textAlign: 'center', py: 3 }}>
             <AirplanemodeActiveIcon sx={{ fontSize: '1.5rem', color: 'text.tertiary', mb: 0.5 }} />
             <Typography sx={{ fontSize: '0.8rem', color: 'text.tertiary' }}>
-              No DJI aircraft registered in Fleet. Register your T50 in the Fleet module.
+              No DJI aircraft registered in Fleet. Register your T50 in Fleet.
             </Typography>
           </Box>
         ) : (
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
             {fleetAircraft.map(ac => {
-              // Check if this Fleet aircraft is linked to a DJI device
               const linkedDevice = devices.find(d => d.aircraft_id === ac.id);
               return (
-                <Box key={ac.id} sx={{ display: 'flex', alignItems: 'center', gap: 2, p: 2, borderRadius: '10px', border: '1px solid rgba(15,23,42,0.06)', bgcolor: linkedDevice ? 'rgba(22,163,74,0.02)' : 'transparent' }}>
+                <Box key={ac.id} sx={{ display: 'flex', alignItems: 'center', gap: 2, p: 2, borderRadius: '10px', border: '1px solid rgba(15,23,42,0.06)' }}>
                   <AirplanemodeActiveIcon sx={{ fontSize: '1.3rem', color: '#2563EB' }} />
                   <Box sx={{ flex: 1 }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -226,22 +207,12 @@ export default function DjiConnectionPanel({ pilot }) {
                       <Chip label="✓ Registered" size="small" sx={{ height: 18, fontSize: '0.5rem', fontWeight: 700, bgcolor: 'rgba(22,163,74,0.08)', color: '#16A34A' }} />
                     </Box>
                     <Typography sx={{ fontSize: '0.7rem', color: 'text.tertiary' }}>
-                      {[ac.manufacturer, ac.model].filter(Boolean).join(' ')} {ac.serial_number ? `• S/N: ${ac.serial_number}` : ''} {ac.registration_number ? `• Reg: ${ac.registration_number}` : ''}
+                      {[ac.manufacturer, ac.model].filter(Boolean).join(' ')} {ac.serial_number ? `• S/N: ${ac.serial_number}` : ''}
                     </Typography>
                   </Box>
                   <Box sx={{ textAlign: 'right' }}>
-                    <Chip
-                      label={ac.status}
-                      size="small"
-                      sx={{
-                        height: 18, fontSize: '0.55rem', fontWeight: 700,
-                        bgcolor: ac.status === 'Ready' ? 'rgba(22,163,74,0.08)' : 'rgba(100,116,139,0.08)',
-                        color: ac.status === 'Ready' ? '#16A34A' : '#64748B',
-                      }}
-                    />
-                    {linkedDevice && (
-                      <Typography sx={{ fontSize: '0.6rem', color: '#16A34A', fontWeight: 600, mt: 0.5 }}>DJI Linked ✓</Typography>
-                    )}
+                    <Chip label={ac.status} size="small" sx={{ height: 18, fontSize: '0.55rem', fontWeight: 700, bgcolor: ac.status === 'Ready' ? 'rgba(22,163,74,0.08)' : 'rgba(100,116,139,0.08)', color: ac.status === 'Ready' ? '#16A34A' : '#64748B' }} />
+                    {linkedDevice && <Typography sx={{ fontSize: '0.6rem', color: '#16A34A', fontWeight: 600, mt: 0.5 }}>DJI Linked</Typography>}
                   </Box>
                 </Box>
               );
@@ -251,7 +222,7 @@ export default function DjiConnectionPanel({ pilot }) {
       </Paper>
 
       {/* ═══════════════════════════════════════════════════════════════ */}
-      {/* SECTION 3: DJI SMARTFARM STATUS                                */}
+      {/* DJI SMARTFARM STATUS                                          */}
       {/* ═══════════════════════════════════════════════════════════════ */}
       <Paper variant="outlined" sx={{ p: 2.5, borderRadius: '12px', mb: 3 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
@@ -265,25 +236,21 @@ export default function DjiConnectionPanel({ pilot }) {
           />
         </Box>
 
-        {/* DJI Discovered Aircraft */}
         {devices.length > 0 ? (
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
             {devices.map(d => {
               const linkedFleet = fleetAircraft.find(ac => ac.id === d.aircraft_id);
               return (
-                <Box key={d.id} sx={{ display: 'flex', alignItems: 'center', gap: 2, p: 2, borderRadius: '10px', border: `1px solid ${linkedFleet ? 'rgba(22,163,74,0.15)' : 'rgba(217,119,6,0.15)'}`, bgcolor: linkedFleet ? 'rgba(22,163,74,0.02)' : 'rgba(217,119,6,0.02)' }}>
+                <Box key={d.id} sx={{ display: 'flex', alignItems: 'center', gap: 2, p: 2, borderRadius: '10px', border: `1px solid ${linkedFleet ? 'rgba(22,163,74,0.15)' : 'rgba(217,119,6,0.15)'}` }}>
                   <FlightIcon sx={{ fontSize: '1.1rem', color: linkedFleet ? '#16A34A' : '#D97706' }} />
                   <Box sx={{ flex: 1 }}>
                     <Typography sx={{ fontSize: '0.85rem', fontWeight: 600 }}>{d.manufacturer} {d.model || 'Aircraft'}</Typography>
                     <Typography sx={{ fontSize: '0.65rem', color: 'text.tertiary' }}>
-                      {d.serial_number ? `S/N: ${d.serial_number}` : 'No serial'} {d.remote_controller ? `• Remote: ${d.remote_controller}` : ''}
+                      {d.serial_number ? `S/N: ${d.serial_number}` : ''} {d.remote_controller ? `• Remote: ${d.remote_controller}` : ''}
                     </Typography>
                   </Box>
                   {linkedFleet ? (
-                    <Box sx={{ textAlign: 'right' }}>
-                      <Chip label="✓ Linked to Fleet" size="small" sx={{ height: 18, fontSize: '0.5rem', fontWeight: 700, bgcolor: 'rgba(22,163,74,0.08)', color: '#16A34A' }} />
-                      <Typography sx={{ fontSize: '0.6rem', color: 'text.tertiary', mt: 0.25 }}>{linkedFleet.aircraft_name}</Typography>
-                    </Box>
+                    <Chip label={`✓ Linked: ${linkedFleet.aircraft_name}`} size="small" sx={{ height: 18, fontSize: '0.5rem', fontWeight: 700, bgcolor: 'rgba(22,163,74,0.08)', color: '#16A34A' }} />
                   ) : (
                     <Button size="small" variant="outlined" sx={{ textTransform: 'none', fontSize: '0.7rem', fontWeight: 600, borderRadius: '8px', borderColor: 'rgba(217,119,6,0.3)', color: '#D97706' }}>
                       Link to Fleet
@@ -294,48 +261,45 @@ export default function DjiConnectionPanel({ pilot }) {
             })}
           </Box>
         ) : (
-          <Box sx={{ p: 2, borderRadius: '10px', bgcolor: 'rgba(15,23,42,0.02)', border: '1px solid rgba(15,23,42,0.04)' }}>
-            <Typography sx={{ fontSize: '0.8rem', color: 'text.secondary', mb: 0.5 }}>
-              {isConnected ? 'No DJI aircraft discovered yet.' : 'DJI aircraft will appear here when SmartFarm is connected.'}
-            </Typography>
-            <Typography sx={{ fontSize: '0.7rem', color: 'text.tertiary' }}>
-              Your Fleet aircraft above can still be used for FlyBy missions without a DJI connection.
-            </Typography>
-          </Box>
+          <Typography sx={{ fontSize: '0.8rem', color: 'text.tertiary' }}>
+            {isConnected ? 'No aircraft discovered from SmartFarm yet.' : 'Aircraft will appear here when SmartFarm is connected.'}
+          </Typography>
         )}
       </Paper>
 
       {/* ═══════════════════════════════════════════════════════════════ */}
-      {/* SECTION 4: WORKFLOW GUIDE                                      */}
+      {/* TARGET WORKFLOW                                                */}
       {/* ═══════════════════════════════════════════════════════════════ */}
       <Paper variant="outlined" sx={{ p: 2.5, borderRadius: '12px', mb: 3 }}>
         <Typography sx={{ fontSize: '0.7rem', fontWeight: 700, color: 'text.tertiary', textTransform: 'uppercase', letterSpacing: '0.03em', mb: 2 }}>
-          How It Works
+          Workflow
         </Typography>
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
           {[
-            { step: '1', label: 'Plan in FlyBy', desc: 'Map field, create route, assign aircraft & pilot' },
-            { step: '2', label: 'Export Field to SmartFarm', desc: 'Prepare field/route package for your T50' },
-            { step: '3', label: 'Import in SmartFarm', desc: 'Complete the DJI SmartFarm import/share workflow' },
-            { step: '4', label: 'Fly with T50', desc: 'Execute the operation with your DJI remote' },
-            { step: '5', label: 'Import Flight Data', desc: 'Sync or import actual flight records back to FlyBy' },
-            { step: '6', label: 'Report & Invoice', desc: 'Generate mission report and invoice with real data' },
+            { step: '1', label: 'Plan in FlyBy', desc: 'Map field, create route, configure mission', status: 'available' },
+            { step: '2', label: 'Sync to DJI SmartFarm', desc: 'Push mission to your T50 remote', status: isConnected ? 'available' : 'requires_connection' },
+            { step: '3', label: 'Fly with T50', desc: 'Execute the operation next morning', status: 'available' },
+            { step: '4', label: 'Flight data syncs back', desc: 'SmartFarm sends actual data to FlyBy', status: isConnected ? 'available' : 'requires_connection' },
+            { step: '5', label: 'Report, Invoice, Profit', desc: 'Automatically generated from actual flight data', status: 'available' },
           ].map((item, i) => (
             <Box key={i} sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-              <Box sx={{ width: 24, height: 24, borderRadius: '8px', bgcolor: 'rgba(22,163,74,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                <Typography sx={{ fontSize: '0.65rem', fontWeight: 700, color: '#16A34A' }}>{item.step}</Typography>
+              <Box sx={{ width: 24, height: 24, borderRadius: '8px', bgcolor: item.status === 'available' ? 'rgba(22,163,74,0.08)' : 'rgba(217,119,6,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <Typography sx={{ fontSize: '0.65rem', fontWeight: 700, color: item.status === 'available' ? '#16A34A' : '#D97706' }}>{item.step}</Typography>
               </Box>
-              <Box>
+              <Box sx={{ flex: 1 }}>
                 <Typography sx={{ fontSize: '0.8rem', fontWeight: 600 }}>{item.label}</Typography>
                 <Typography sx={{ fontSize: '0.65rem', color: 'text.tertiary' }}>{item.desc}</Typography>
               </Box>
+              {item.status !== 'available' && (
+                <Chip label="Requires Connection" size="small" sx={{ height: 16, fontSize: '0.45rem', fontWeight: 700, bgcolor: 'rgba(217,119,6,0.06)', color: '#D97706' }} />
+              )}
             </Box>
           ))}
         </Box>
       </Paper>
 
       {/* ═══════════════════════════════════════════════════════════════ */}
-      {/* SECTION 5: CAPABILITIES                                       */}
+      {/* CAPABILITIES                                                  */}
       {/* ═══════════════════════════════════════════════════════════════ */}
       <Paper variant="outlined" sx={{ p: 2.5, borderRadius: '12px' }}>
         <Typography sx={{ fontSize: '0.7rem', fontWeight: 700, color: 'text.tertiary', textTransform: 'uppercase', letterSpacing: '0.03em', mb: 2 }}>
@@ -343,20 +307,20 @@ export default function DjiConnectionPanel({ pilot }) {
         </Typography>
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75 }}>
           {[
-            { label: 'Field & Route Export', available: true },
-            { label: 'Import Flight Records', available: true },
-            { label: 'Mission Matching', available: true },
-            { label: 'Application / Litre Data', available: true },
-            { label: 'Direct Route Sync to T50', available: false },
-            { label: 'Live Flight Telemetry', available: false },
-            { label: 'Automatic Flight Sync', available: false },
+            { label: 'Mission Planning', available: true },
+            { label: 'Field & Route Preparation', available: true },
+            { label: 'Sync Mission to SmartFarm', available: isConnected },
+            { label: 'Receive Flight Data', available: isConnected },
+            { label: 'Import Flight Data (fallback)', available: true },
+            { label: 'Auto Mission Matching', available: true },
+            { label: 'Application / Litre Tracking', available: true },
           ].map((cap, i) => (
             <Box key={i} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', py: 0.75 }}>
               <Typography sx={{ fontSize: '0.8rem', fontWeight: 500, color: cap.available ? 'text.primary' : 'text.tertiary' }}>{cap.label}</Typography>
               <Chip
-                label={cap.available ? 'Available' : 'Requires DJI API'}
+                label={cap.available ? 'Available' : 'Connect SmartFarm'}
                 size="small"
-                sx={{ height: 16, fontSize: '0.5rem', fontWeight: 700, bgcolor: cap.available ? 'rgba(22,163,74,0.08)' : 'rgba(148,163,184,0.06)', color: cap.available ? '#16A34A' : '#94A3B8' }}
+                sx={{ height: 16, fontSize: '0.5rem', fontWeight: 700, bgcolor: cap.available ? 'rgba(22,163,74,0.08)' : 'rgba(217,119,6,0.06)', color: cap.available ? '#16A34A' : '#D97706' }}
               />
             </Box>
           ))}
@@ -366,7 +330,7 @@ export default function DjiConnectionPanel({ pilot }) {
       {/* Future Placeholders */}
       <Divider sx={{ my: 3 }} />
       <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-        {['OAuth Integration', 'Live Telemetry', 'Flight History Sync', 'Battery Analytics', 'Firmware Updates', 'FlightHub 2'].map(item => (
+        {['OAuth Integration', 'Live Telemetry', 'Automatic Flight Sync', 'Battery Analytics', 'Firmware Updates'].map(item => (
           <Chip key={item} label={item} size="small" variant="outlined" disabled sx={{ fontSize: '0.6rem', borderColor: 'rgba(15,23,42,0.08)' }} />
         ))}
       </Box>
@@ -375,23 +339,24 @@ export default function DjiConnectionPanel({ pilot }) {
       {/* CONNECT DIALOG                                                */}
       {/* ═══════════════════════════════════════════════════════════════ */}
       <Dialog open={connectDialogOpen} onClose={() => setConnectDialogOpen(false)} maxWidth="sm" fullWidth PaperProps={{ sx: { borderRadius: '16px' } }}>
-        <DialogTitle sx={{ fontWeight: 700, fontSize: '1.1rem' }}>DJI SmartFarm Connection</DialogTitle>
+        <DialogTitle sx={{ fontWeight: 700, fontSize: '1.1rem' }}>Connect DJI SmartFarm</DialogTitle>
         <DialogContent>
+          <Alert severity="info" sx={{ borderRadius: '10px', mb: 2.5 }}>
+            <Typography sx={{ fontSize: '0.8rem', fontWeight: 600 }}>
+              Official DJI SmartFarm integration is not yet configured for this FlyBy environment.
+            </Typography>
+          </Alert>
+
           <Typography sx={{ fontSize: '0.9rem', color: 'text.secondary', lineHeight: 1.7, mb: 2 }}>
-            Direct DJI SmartFarm synchronization is not currently configured for this FlyBy environment.
+            When official DJI SmartFarm API access is available, FlyBy will connect directly to your SmartFarm account. This will enable:
           </Typography>
-          <Typography sx={{ fontSize: '0.85rem', color: 'text.secondary', lineHeight: 1.7, mb: 2 }}>
-            Your DJI SmartFarm account remains managed through DJI's official environment.
-          </Typography>
-          <Typography sx={{ fontSize: '0.85rem', color: 'text.secondary', lineHeight: 1.7, mb: 2 }}>
-            FlyBy can currently prepare fields and missions and import/export flight data using the supported workflow:
-          </Typography>
-          <Box sx={{ pl: 2, mb: 2 }}>
+
+          <Box sx={{ pl: 2, mb: 2.5 }}>
             {[
-              'Map fields and create spray routes in FlyBy',
-              'Export prepared fields to SmartFarm',
-              'Fly missions using your DJI remote controller',
-              'Import flight data back into FlyBy after missions',
+              'Automatic mission sync from FlyBy to your T50 remote',
+              'Flight data automatically returned after operations',
+              'Aircraft and battery discovery',
+              'No manual file export/import needed',
             ].map((item, i) => (
               <Box key={i} sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
                 <CheckCircleIcon sx={{ fontSize: '0.8rem', color: '#16A34A' }} />
@@ -399,11 +364,13 @@ export default function DjiConnectionPanel({ pilot }) {
               </Box>
             ))}
           </Box>
-          <Alert severity="info" sx={{ borderRadius: '10px' }}>
-            <Typography sx={{ fontSize: '0.75rem' }}>
-              When official DJI SmartFarm API access becomes available for the Agras T50, FlyBy will support direct connection and automatic synchronization through this screen.
-            </Typography>
-          </Alert>
+
+          <Divider sx={{ my: 2 }} />
+
+          <Typography sx={{ fontSize: '0.85rem', fontWeight: 600, mb: 1 }}>In the meantime</Typography>
+          <Typography sx={{ fontSize: '0.8rem', color: 'text.secondary', lineHeight: 1.6 }}>
+            You can plan missions in FlyBy and use the Import Flight Data button to bring DJI/SmartFarm flight records into FlyBy after your operations. This lets you generate reports, invoices, and track profitability with actual flight data.
+          </Typography>
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2.5, display: 'flex', gap: 1 }}>
           <Button onClick={() => setConnectDialogOpen(false)} sx={{ color: 'text.secondary' }}>Close</Button>
@@ -421,7 +388,7 @@ export default function DjiConnectionPanel({ pilot }) {
             onClick={() => { setConnectDialogOpen(false); handleOpenSmartFarm(); }}
             sx={{ borderRadius: '10px', textTransform: 'none', fontWeight: 600 }}
           >
-            Open DJI SmartFarm
+            Open SmartFarm
           </Button>
         </DialogActions>
       </Dialog>
