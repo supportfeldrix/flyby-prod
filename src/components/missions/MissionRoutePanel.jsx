@@ -26,6 +26,7 @@ import {
   buildRoutePreview,
 } from '../../services/missionRouteService';
 import { exportMission, validateDjiMission } from '../../services/djiMissionService';
+import { checkBackendHealth, syncWaylineToBackend } from '../../services/djiCloudService';
 
 const statusColors = {
   Draft: '#64748B',
@@ -148,16 +149,66 @@ export default function MissionRoutePanel({ mission, onRouteChange }) {
     finally { setSaving(false); }
   };
 
-  // Export for DJI
+  // Sync to DJI Cloud Backend
   const handleExport = async () => {
     if (!route) return;
     try {
-      const result = await exportMission(route, mission);
-      if (result.success) {
-        showToast(result.message);
-        fetchRoute(); // Refresh status
+      // Ensure route is saved before syncing
+      let savedRoute = route;
+      if (!route.id && mission?.id && company?.id) {
+        try {
+          savedRoute = await saveMissionRoute(mission.id, company.id, {
+            field_id: mission.field_id,
+            route_name: `Route — ${mission.mission_number}`,
+            flight_direction: params.flightDirection,
+            swath_width: params.swathWidth,
+            overlap_pct: params.overlap,
+            altitude: params.altitude,
+            speed: params.speed,
+            headland_width: params.headlandWidth,
+            application_rate: params.applicationRate,
+            total_distance: route.total_distance,
+            estimated_time: route.estimated_time,
+            estimated_volume: route.estimated_volume,
+            route_geojson: route.route_geojson,
+            exclusion_zones: route.exclusion_zones || [],
+            obstacles: route.obstacles || [],
+            status: 'Prepared',
+            sync_status: 'none',
+          });
+          setRoute(savedRoute);
+        } catch (saveErr) {
+          console.warn('[FlyBy] Auto-save before sync failed:', saveErr.message);
+        }
+      }
+
+      // Try real DJI Cloud backend sync
+      const health = await checkBackendHealth();
+      if (health.available) {
+        showToast('Syncing to DJI backend...', 'info');
+        const result = await syncWaylineToBackend(mission?.fields || {}, savedRoute, mission, company?.id);
+        if (result.success) {
+          setRoute(prev => ({
+            ...prev,
+            sync_status: 'synced',
+            status: 'Synced',
+            provider_ref: result.wayline_id,
+            provider: 'dji_cloud',
+            last_sync_at: new Date().toISOString(),
+          }));
+          showToast('Synced to FlyBy DJI Backend');
+        } else {
+          setRoute(prev => ({ ...prev, sync_status: 'failed', status: 'Failed' }));
+          showToast(result.error || 'Sync failed', 'error');
+        }
       } else {
-        showToast(result.errors?.join('; ') || 'Export failed', 'error');
+        // Fallback: JSON file export (backend not available)
+        const result = await exportMission(savedRoute, mission);
+        if (result.success) {
+          showToast(result.message || 'Exported as file — DJI backend unavailable');
+        } else {
+          showToast(result.errors?.join('; ') || 'Export failed', 'error');
+        }
       }
     } catch (err) { showToast(err.message, 'error'); }
   };
