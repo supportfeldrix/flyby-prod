@@ -27,6 +27,7 @@ import {
 } from '../../services/missionRouteService';
 import { exportMission, validateDjiMission } from '../../services/djiMissionService';
 import { checkBackendHealth, syncWaylineToBackend } from '../../services/djiCloudService';
+import { geoJSONToLatLngs } from '../../services/boundaryService';
 
 const statusColors = {
   Draft: '#64748B',
@@ -86,9 +87,25 @@ export default function MissionRoutePanel({ mission, onRouteChange }) {
 
   useEffect(() => { fetchRoute(); }, [fetchRoute]);
 
-  // Parse field boundary
+  // Parse field boundary — supports GeoJSON Polygon format
   const boundary = mission?.fields?.boundary;
-  const boundaryPoints = boundary ? (typeof boundary === 'string' ? JSON.parse(boundary) : boundary) : null;
+  let boundaryPoints = null;
+  if (boundary?.coordinates?.[0]) {
+    // GeoJSON Polygon: convert [lng, lat] to {lat, lng}
+    boundaryPoints = geoJSONToLatLngs(boundary);
+  } else if (Array.isArray(boundary) && boundary.length >= 3) {
+    // Already flat array of {lat, lng}
+    boundaryPoints = boundary;
+  } else if (typeof boundary === 'string') {
+    try {
+      const parsed = JSON.parse(boundary);
+      if (parsed?.coordinates?.[0]) {
+        boundaryPoints = geoJSONToLatLngs(parsed);
+      } else if (Array.isArray(parsed)) {
+        boundaryPoints = parsed;
+      }
+    } catch { /* invalid JSON */ }
+  }
   const hasBoundary = Array.isArray(boundaryPoints) && boundaryPoints.length >= 3;
 
   // Map center from boundary

@@ -68,7 +68,7 @@ export default function MissionExecutionPanel({ open, onClose, mission: initialM
     if (!mission?.id) return;
     const { data } = await supabase
       .from('missions')
-      .select('*, customers(customer_name), farms(farm_name), fields(field_name, crop, area_hectares), aircraft(aircraft_name, status), pilots(first_name, last_name, display_name, status), battery_sets:battery_id(battery_code, current_charge)')
+      .select('*, customers(customer_name), farms(farm_name), fields(field_name, crop, area_hectares, boundary), aircraft(aircraft_name, status), pilots(first_name, last_name, display_name, status), battery_sets:battery_id(battery_code, current_charge)')
       .eq('id', mission.id)
       .single();
     if (data) setMission(data);

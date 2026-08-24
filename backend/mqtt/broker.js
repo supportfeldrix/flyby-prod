@@ -5,7 +5,7 @@ let client = null;
 
 export async function connectMqtt() {
   if (!config.mqtt.brokerUrl) {
-    console.log('[MQTT] No broker URL configured — skipping');
+    console.log('[MQTT] No broker URL configured — MQTT disabled');
     return;
   }
 
@@ -15,7 +15,7 @@ export async function connectMqtt() {
       username: config.mqtt.username || undefined,
       password: config.mqtt.password || undefined,
       clean: true,
-      reconnectPeriod: 5000,
+      reconnectPeriod: 0, // Do not auto-reconnect — we handle this manually
       connectTimeout: 10000,
     });
 
@@ -33,8 +33,19 @@ export async function connectMqtt() {
       } catch {}
     });
 
-    client.on('error', (err) => { reject(err); });
-    client.on('close', () => { console.log('[MQTT] Closed'); });
+    client.on('error', (err) => {
+      console.warn(`[MQTT] Connection error: ${err.message} — MQTT will remain disabled until broker is available`);
+      client.end(true); // Stop the client cleanly
+      client = null;
+      reject(err);
+    });
+
+    client.on('close', () => {
+      // Only log if we were previously connected (avoid spam)
+      if (client?.connected === false && client?._reconnecting) {
+        // Suppress repeated close logs
+      }
+    });
   });
 }
 
