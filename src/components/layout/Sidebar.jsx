@@ -105,7 +105,7 @@ export default function Sidebar({
             component="img"
             src="/flyby-icon-192.png"
             alt="FlyBy"
-            sx={{ width: 32, height: 32, borderRadius: '8px', objectFit: 'contain' }}
+            sx={{ width: 36, height: 36, borderRadius: '8px', objectFit: 'contain' }}
           />
         ) : (
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
@@ -113,7 +113,7 @@ export default function Sidebar({
               component="img"
               src="/flyby-icon-192.png"
               alt="FlyBy"
-              sx={{ width: 40, height: 40, borderRadius: '10px', objectFit: 'contain' }}
+              sx={{ width: 44, height: 44, borderRadius: '10px', objectFit: 'contain' }}
             />
             <Box>
               <Typography
@@ -132,15 +132,27 @@ export default function Sidebar({
               </Typography>
               <Typography
                 sx={{
-                  fontSize: '0.55rem',
-                  fontWeight: 600,
-                  letterSpacing: '0.12em',
+                  fontSize: '0.5rem',
+                  fontWeight: 700,
+                  letterSpacing: '0.08em',
                   color: 'text.tertiary',
                   textTransform: 'uppercase',
                   mt: 0.25,
                 }}
               >
                 by Feldrix
+              </Typography>
+              <Typography
+                sx={{
+                  fontSize: '0.45rem',
+                  fontWeight: 600,
+                  letterSpacing: '0.1em',
+                  color: '#16A34A',
+                  textTransform: 'uppercase',
+                  mt: 0.15,
+                }}
+              >
+                Smart Drone Operations
               </Typography>
             </Box>
           </Box>

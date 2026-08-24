@@ -97,18 +97,26 @@ export default function MissionReportPreview({ open, onClose, report }) {
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', position: 'relative', zIndex: 1 }}>
               {/* Left — Branding */}
               <Box>
-                <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 0 }}>
-                  <Typography sx={{ fontSize: '1.8rem', fontWeight: 900, color: '#FFFFFF', letterSpacing: '-0.04em' }}>
-                    FLY
-                  </Typography>
-                  <Typography sx={{ fontSize: '1.8rem', fontWeight: 900, color: '#16A34A', letterSpacing: '-0.04em' }}>
-                    BY
-                  </Typography>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                  <Box component="img" src="/flyby-icon-192.png" alt="FlyBy" sx={{ width: 36, height: 36, borderRadius: '8px' }} />
+                  <Box>
+                    <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 0 }}>
+                      <Typography sx={{ fontSize: '1.6rem', fontWeight: 900, color: '#FFFFFF', letterSpacing: '-0.04em' }}>
+                        FLY
+                      </Typography>
+                      <Typography sx={{ fontSize: '1.6rem', fontWeight: 900, color: '#16A34A', letterSpacing: '-0.04em' }}>
+                        BY
+                      </Typography>
+                    </Box>
+                    <Typography sx={{ fontSize: '0.55rem', fontWeight: 700, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.08em', mt: -0.3 }}>
+                      by Feldrix
+                    </Typography>
+                  </Box>
                 </Box>
-                <Typography sx={{ fontSize: '0.65rem', fontWeight: 600, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.12em', mt: -0.5 }}>
-                  Precision Agriculture from Above
+                <Typography sx={{ fontSize: '0.5rem', fontWeight: 600, color: '#16A34A', textTransform: 'uppercase', letterSpacing: '0.1em', mt: 0.5 }}>
+                  Smart Drone Operations
                 </Typography>
-                <Typography sx={{ fontSize: '1.3rem', fontWeight: 800, color: '#FFFFFF', mt: 2 }}>
+                <Typography sx={{ fontSize: '1.3rem', fontWeight: 800, color: '#FFFFFF', mt: 1.5 }}>
                   MISSION REPORT
                 </Typography>
                 <Typography sx={{ fontSize: '0.8rem', color: '#94A3B8', mt: 0.25 }}>
@@ -349,7 +357,7 @@ export default function MissionReportPreview({ open, onClose, report }) {
                     FlyBy by Feldrix
                   </Typography>
                   <Typography sx={{ fontSize: '0.65rem', color: '#94A3B8' }}>
-                    Precision Agriculture from Above
+                    Smart Drone Operations
                   </Typography>
                 </Box>
                 <Box>
@@ -392,7 +400,7 @@ export default function MissionReportPreview({ open, onClose, report }) {
                 FlyBy by Feldrix
               </Typography>
               <Typography sx={{ fontSize: '0.6rem', color: '#94A3B8' }}>
-                Precision Agriculture from Above • www.feldrix.com
+                Smart Drone Operations • www.feldrix.com
               </Typography>
             </Box>
             <Box sx={{ textAlign: 'center' }}>

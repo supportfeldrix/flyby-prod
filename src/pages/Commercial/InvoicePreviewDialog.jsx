@@ -79,7 +79,7 @@ export default function InvoicePreviewDialog({ open, onClose, invoiceId, onRecor
     doc.text('BY', 20 + doc.getTextWidth('FLY'), 22);
     doc.setFontSize(7);
     doc.setTextColor(148, 163, 184);
-    doc.text('Precision Agriculture from Above', 20, 28);
+    doc.text('Smart Drone Operations', 20, 28);
     doc.setFontSize(14);
     doc.setTextColor(255, 255, 255);
     doc.text('INVOICE', 20, 38);
@@ -227,7 +227,7 @@ export default function InvoicePreviewDialog({ open, onClose, invoiceId, onRecor
     doc.line(20, footerY - 4, 190, footerY - 4);
     doc.setFontSize(6.5);
     doc.setTextColor(148, 163, 184);
-    doc.text('FlyBy by Feldrix • Precision Agriculture from Above • www.feldrix.com', 20, footerY);
+    doc.text('FlyBy by Feldrix • Smart Drone Operations • www.feldrix.com', 20, footerY);
     doc.text(invoice.invoice_number, 190, footerY, { align: 'right' });
 
     doc.save(`${invoice.invoice_number}.pdf`);
@@ -296,7 +296,7 @@ export default function InvoicePreviewDialog({ open, onClose, invoiceId, onRecor
                     <Typography sx={{ fontSize: '1.6rem', fontWeight: 900, color: '#FFFFFF', letterSpacing: '-0.04em' }}>FLY</Typography>
                     <Typography sx={{ fontSize: '1.6rem', fontWeight: 900, color: '#16A34A', letterSpacing: '-0.04em' }}>BY</Typography>
                   </Box>
-                  <Typography sx={{ fontSize: '0.6rem', fontWeight: 600, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.12em', mt: -0.5 }}>Precision Agriculture from Above</Typography>
+                  <Typography sx={{ fontSize: '0.6rem', fontWeight: 600, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.12em', mt: -0.5 }}>Smart Drone Operations</Typography>
                   <Typography sx={{ fontSize: '1.2rem', fontWeight: 800, color: '#FFFFFF', mt: 2 }}>INVOICE</Typography>
                 </Box>
                 <Box sx={{ textAlign: 'right' }}>
@@ -445,7 +445,7 @@ export default function InvoicePreviewDialog({ open, onClose, invoiceId, onRecor
 
             {/* Document Footer */}
             <Box sx={{ px: 5, py: 2, borderTop: '1px solid rgba(15,23,42,0.06)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <Typography sx={{ fontSize: '0.65rem', color: '#94A3B8' }}>FlyBy by Feldrix • Precision Agriculture from Above • www.feldrix.com</Typography>
+              <Typography sx={{ fontSize: '0.65rem', color: '#94A3B8' }}>FlyBy by Feldrix • Smart Drone Operations • www.feldrix.com</Typography>
               <Typography sx={{ fontSize: '0.65rem', color: '#94A3B8' }}>{invoice.invoice_number}</Typography>
             </Box>
           </Paper>

@@ -4,12 +4,35 @@ import jsPDF from 'jspdf';
  * FlyBy Professional Mission Report — PDF Generation Service
  * 
  * Generates beautifully designed A4 landscape PDFs with:
- * - FlyBy branding and watermark
+ * - FlyBy official logo
  * - Professional typography and spacing
  * - Section dividers and modern tables
  * - Status badges and colour coding
  * - Company branding support
  */
+
+// ─── Logo Loading ───────────────────────────────────────────────────────────
+let logoDataUrl = null;
+
+/**
+ * Load the FlyBy logo as a data URL for embedding in PDFs.
+ * Uses the official logo from /flyby-icon-512.png.
+ */
+async function loadLogo() {
+  if (logoDataUrl) return logoDataUrl;
+  try {
+    const response = await fetch('/flyby-icon-512.png');
+    const blob = await response.blob();
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onloadend = () => { logoDataUrl = reader.result; resolve(logoDataUrl); };
+      reader.readAsDataURL(blob);
+    });
+  } catch (err) {
+    console.warn('[PDF] Logo load failed:', err.message);
+    return null;
+  }
+}
 
 // ─── Design Tokens ──────────────────────────────────────────────────────────
 const COLORS = {
@@ -120,20 +143,34 @@ class ReportPDFBuilder {
     doc.text('FLYBY', PAGE.width / 2, 38, { align: 'center' });
     doc.setGState(new doc.GState({ opacity: 1 }));
 
-    // FlyBy Logo text
-    doc.setFontSize(22);
+    // FlyBy Logo image (if loaded)
+    if (logoDataUrl) {
+      try {
+        doc.addImage(logoDataUrl, 'PNG', PAGE.marginLeft, 6, 16, 16);
+      } catch { /* logo embed failed — continue with text */ }
+    }
+
+    // FlyBy Logo text (positioned after image)
+    const textX = logoDataUrl ? PAGE.marginLeft + 19 : PAGE.marginLeft;
+    doc.setFontSize(20);
     doc.setFont(FONTS.heading, 'bold');
     this.setColor(COLORS.white);
-    doc.text('FLY', PAGE.marginLeft, 22);
+    doc.text('FLY', textX, 17);
     this.setColor(COLORS.primary);
     const flyWidth = doc.getTextWidth('FLY');
-    doc.text('BY', PAGE.marginLeft + flyWidth, 22);
+    doc.text('BY', textX + flyWidth, 17);
 
-    // Tagline
-    doc.setFontSize(7);
-    doc.setFont(FONTS.body, 'normal');
+    // By Feldrix
+    doc.setFontSize(6);
+    doc.setFont(FONTS.body, 'bold');
     this.setColor(COLORS.textTertiary);
-    doc.text('Precision Agriculture from Above', PAGE.marginLeft, 28);
+    doc.text('BY FELDRIX', textX, 22);
+
+    // Smart Drone Operations tagline
+    doc.setFontSize(5.5);
+    doc.setFont(FONTS.body, 'normal');
+    this.setColor(COLORS.primary);
+    doc.text('SMART DRONE OPERATIONS', textX, 26);
 
     // Report title
     doc.setFontSize(16);
@@ -535,10 +572,10 @@ class ReportPDFBuilder {
     doc.setFontSize(6.5);
     doc.setFont(FONTS.body, 'bold');
     this.setColor(COLORS.textSecondary);
-    doc.text('FlyBy by Feldrix', PAGE.marginLeft, footerY + 2);
+    doc.text('FlyBy by Feldrix — Smart Drone Operations', PAGE.marginLeft, footerY + 2);
     doc.setFont(FONTS.body, 'normal');
     this.setColor(COLORS.textTertiary);
-    doc.text('Precision Agriculture from Above • www.feldrix.com', PAGE.marginLeft, footerY + 6);
+    doc.text('www.feldrix.com', PAGE.marginLeft, footerY + 6);
 
     // Center — version
     doc.setFontSize(6);
@@ -574,7 +611,8 @@ class ReportPDFBuilder {
 /**
  * Generate a PDF Blob from report data.
  */
-export function generatePDFBlob(reportData) {
+export async function generatePDFBlob(reportData) {
+  await loadLogo();
   const builder = new ReportPDFBuilder(reportData);
   const doc = builder.build();
   return doc.output('blob');
@@ -583,7 +621,8 @@ export function generatePDFBlob(reportData) {
 /**
  * Download report as PDF file.
  */
-export function downloadPDF(reportData, filename) {
+export async function downloadPDF(reportData, filename) {
+  await loadLogo();
   const builder = new ReportPDFBuilder(reportData);
   const doc = builder.build();
   const defaultFilename = filename || `${reportData.generated?.report_number || 'report'}_${reportData.mission?.mission_number || 'mission'}.pdf`;
@@ -593,7 +632,8 @@ export function downloadPDF(reportData, filename) {
 /**
  * Open report in new window for printing.
  */
-export function printReport(reportData) {
+export async function printReport(reportData) {
+  await loadLogo();
   const builder = new ReportPDFBuilder(reportData);
   const doc = builder.build();
   const blob = doc.output('blob');
@@ -609,7 +649,8 @@ export function printReport(reportData) {
 /**
  * Generate a data URL for inline preview.
  */
-export function generatePDFDataUrl(reportData) {
+export async function generatePDFDataUrl(reportData) {
+  await loadLogo();
   const builder = new ReportPDFBuilder(reportData);
   const doc = builder.build();
   return doc.output('dataurlstring');
