@@ -112,7 +112,7 @@ export default function Sidebar({
             component="img"
             src="/flyby-icon-192.png"
             alt="FlyBy"
-            sx={{ width: 52, height: 52, borderRadius: '12px', objectFit: 'contain' }}
+            sx={{ width: '100%', maxWidth: 180, height: 'auto', objectFit: 'contain' }}
           />
         )}
       </Box>
