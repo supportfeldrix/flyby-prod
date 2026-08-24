@@ -101,39 +101,48 @@ export default function Sidebar({
         }}
       >
         {collapsed ? (
-          <Typography
-            sx={{ fontSize: '1.1rem', fontWeight: 900, letterSpacing: '-0.04em', color: 'text.primary' }}
-          >
-            F<Box component="span" sx={{ color: 'primary.main' }}>B</Box>
-          </Typography>
+          <Box
+            component="img"
+            src="/flyby-icon-192.png"
+            alt="FlyBy"
+            sx={{ width: 32, height: 32, borderRadius: '8px', objectFit: 'contain' }}
+          />
         ) : (
-          <Box>
-            <Typography
-              sx={{
-                fontSize: '1.5rem',
-                fontWeight: 900,
-                letterSpacing: '-0.04em',
-                lineHeight: 1,
-                color: 'text.primary',
-              }}
-            >
-              FLY
-              <Box component="span" sx={{ color: 'primary.main' }}>
-                BY
-              </Box>
-            </Typography>
-            <Typography
-              sx={{
-                fontSize: '0.6rem',
-                fontWeight: 600,
-                letterSpacing: '0.12em',
-                color: 'text.tertiary',
-                textTransform: 'uppercase',
-                mt: 0.25,
-              }}
-            >
-              by Feldrix
-            </Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+            <Box
+              component="img"
+              src="/flyby-icon-192.png"
+              alt="FlyBy"
+              sx={{ width: 40, height: 40, borderRadius: '10px', objectFit: 'contain' }}
+            />
+            <Box>
+              <Typography
+                sx={{
+                  fontSize: '1.3rem',
+                  fontWeight: 900,
+                  letterSpacing: '-0.04em',
+                  lineHeight: 1,
+                  color: 'text.primary',
+                }}
+              >
+                FLY
+                <Box component="span" sx={{ color: 'primary.main' }}>
+                  BY
+                </Box>
+              </Typography>
+              <Typography
+                sx={{
+                  fontSize: '0.55rem',
+                  fontWeight: 600,
+                  letterSpacing: '0.12em',
+                  color: 'text.tertiary',
+                  textTransform: 'uppercase',
+                  mt: 0.25,
+                }}
+              >
+                by Feldrix
+              </Typography>
+            </Box>
           </Box>
         )}
       </Box>
