@@ -146,42 +146,20 @@ class ReportPDFBuilder {
     // FlyBy Logo image (if loaded)
     if (logoDataUrl) {
       try {
-        doc.addImage(logoDataUrl, 'PNG', PAGE.marginLeft, 6, 16, 16);
-      } catch { /* logo embed failed — continue with text */ }
+        doc.addImage(logoDataUrl, 'PNG', PAGE.marginLeft, 6, 18, 18);
+      } catch { /* logo embed failed — continue */ }
     }
-
-    // FlyBy Logo text (positioned after image)
-    const textX = logoDataUrl ? PAGE.marginLeft + 19 : PAGE.marginLeft;
-    doc.setFontSize(20);
-    doc.setFont(FONTS.heading, 'bold');
-    this.setColor(COLORS.white);
-    doc.text('FLY', textX, 17);
-    this.setColor(COLORS.primary);
-    const flyWidth = doc.getTextWidth('FLY');
-    doc.text('BY', textX + flyWidth, 17);
-
-    // By Feldrix
-    doc.setFontSize(6);
-    doc.setFont(FONTS.body, 'bold');
-    this.setColor(COLORS.textTertiary);
-    doc.text('BY FELDRIX', textX, 22);
-
-    // Smart Drone Operations tagline
-    doc.setFontSize(5.5);
-    doc.setFont(FONTS.body, 'normal');
-    this.setColor(COLORS.primary);
-    doc.text('SMART DRONE OPERATIONS', textX, 26);
 
     // Report title
     doc.setFontSize(16);
     doc.setFont(FONTS.heading, 'bold');
     this.setColor(COLORS.white);
-    doc.text('MISSION REPORT', PAGE.marginLeft, 40);
+    doc.text('MISSION REPORT', PAGE.marginLeft, 38);
 
     doc.setFontSize(8);
     doc.setFont(FONTS.body, 'normal');
     this.setColor(COLORS.textTertiary);
-    doc.text('Professional Agricultural Drone Operations', PAGE.marginLeft, 46);
+    doc.text('Professional Agricultural Drone Operations', PAGE.marginLeft, 44);
 
     // Right side — Report number & date
     doc.setFontSize(9);
